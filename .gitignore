@@ -23,6 +23,7 @@ yarn-error.log*
 pnpm-debug.log*
 apps/*/dist/
 apps/*/.vite/
+apps/*/out/
 *.tsbuildinfo
 
 # Env & secrets
