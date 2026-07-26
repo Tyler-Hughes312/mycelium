@@ -1,4 +1,141 @@
+import { useCallback, useEffect, useState } from "react";
+import {
+  clearImpactEvents,
+  disconnectGitHub,
+  getGitHubStatus,
+  getSettings,
+  patchSettings,
+  pollGitHubDevice,
+  saveGitHubPat,
+  startGitHubDevice,
+  type AppSettings,
+  type EmbeddingStatus,
+  type GitHubStatus,
+} from "../api/client";
+
+const MODEL_OPTIONS = [
+  "sentence-transformers/all-MiniLM-L6-v2",
+  "jinaai/jina-embeddings-v2-base-code",
+  "mycelium-hashing-v1",
+];
+
 export function SettingsPage() {
+  const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [runtime, setRuntime] = useState<Partial<EmbeddingStatus>>({});
+  const [vaultDir, setVaultDir] = useState("");
+  const [historyDepth, setHistoryDepth] = useState(500);
+  const [model, setModel] = useState(MODEL_OPTIONS[0]);
+  const [githubClientId, setGithubClientId] = useState("");
+  const [impactTracking, setImpactTracking] = useState(true);
+  const [github, setGithub] = useState<GitHubStatus | null>(null);
+  const [pat, setPat] = useState("");
+  const [deviceCode, setDeviceCode] = useState<string | null>(null);
+  const [deviceUri, setDeviceUri] = useState<string | null>(null);
+  const [polling, setPolling] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const refreshGitHub = useCallback(async () => {
+    const status = await getGitHubStatus();
+    setGithub(status);
+    return status;
+  }, []);
+
+  useEffect(() => {
+    void getSettings()
+      .then(async (data) => {
+        setSettings(data.settings);
+        setRuntime(data.embedding_runtime as Partial<EmbeddingStatus>);
+        setVaultDir(data.settings.vault_dir);
+        setHistoryDepth(data.settings.history_depth);
+        setModel(data.settings.embedding_model);
+        setGithubClientId(data.settings.github_client_id ?? "");
+        setImpactTracking(data.settings.impact_tracking_enabled !== false);
+        if (data.github) setGithub(data.github);
+        else await refreshGitHub();
+      })
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : "Failed to load settings");
+      });
+  }, [refreshGitHub]);
+
+  async function onApply() {
+    setSaving(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const res = await patchSettings({
+        vault_dir: vaultDir,
+        history_depth: historyDepth,
+        embedding_model: model,
+        github_client_id: githubClientId,
+        impact_tracking_enabled: impactTracking,
+      });
+      setSettings(res.settings);
+      if (res.github) setGithub(res.github);
+      setMessage(res.restart_hint ?? "Settings saved.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function onSavePat() {
+    setError(null);
+    setMessage(null);
+    try {
+      const res = await saveGitHubPat(pat);
+      setPat("");
+      setMessage(`Connected as @${res.login}`);
+      await refreshGitHub();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "PAT save failed");
+    }
+  }
+
+  async function onDeviceStart() {
+    setError(null);
+    setMessage(null);
+    try {
+      // Persist client_id so Core can run device flow
+      if (githubClientId.trim()) {
+        const saved = await patchSettings({ github_client_id: githubClientId });
+        setSettings(saved.settings);
+        if (saved.github) setGithub(saved.github);
+      }
+      const start = await startGitHubDevice();
+      setDeviceCode(start.user_code);
+      setDeviceUri(start.verification_uri);
+      setPolling(true);
+      const intervalMs = Math.max(5, start.interval || 5) * 1000;
+      const deadline = Date.now() + (start.expires_in || 900) * 1000;
+      while (Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, intervalMs));
+        const poll = await pollGitHubDevice();
+        if (poll.status === "connected") {
+          setDeviceCode(null);
+          setDeviceUri(null);
+          setMessage(`Connected as @${poll.login}`);
+          await refreshGitHub();
+          break;
+        }
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Device login failed");
+    } finally {
+      setPolling(false);
+    }
+  }
+
+  async function onDisconnect() {
+    setError(null);
+    await disconnectGitHub();
+    setMessage("GitHub disconnected");
+    await refreshGitHub();
+  }
+
   return (
     <div className="h-full overflow-y-auto p-xl scroll-smooth bg-surface">
       <div className="max-w-3xl mx-auto space-y-xl pb-xxl">
@@ -26,11 +163,168 @@ export function SettingsPage() {
               <span className="w-2 h-2 rounded-full bg-primary" />
             </h2>
             <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
-              Mycelium operates entirely local-first. Your code, indices, and
-              queries never leave this device by default. The local Core handles
-              all processing, and no account or cloud sync is required for full
-              functionality.
+              {settings?.privacy.summary ??
+                "Mycelium operates entirely local-first. No cloud account is required."}
             </p>
+            <p className="font-technical-mono-sm text-technical-mono-sm text-muted mt-2">
+              allow_code_upload={String(settings?.allow_code_upload ?? false)} ·
+              allow_remote_llm={String(settings?.allow_remote_llm ?? false)} ·
+              impact_tracking={String(impactTracking)} ·
+              api_token={settings?.api_token_enabled ? "on" : "off"} ·
+              config_version={settings?.config_version ?? "—"}
+            </p>
+            <div className="mt-md flex flex-col gap-sm sm:flex-row sm:items-center sm:justify-between">
+              <label className="flex items-center gap-sm font-body-sm text-body-sm text-on-surface cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={impactTracking}
+                  onChange={(e) => setImpactTracking(e.target.checked)}
+                  className="accent-[var(--color-primary,#00d1b2)]"
+                />
+                Track local impact estimates (search / focus / vault pack)
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  if (
+                    !window.confirm(
+                      "Clear all local impact history on this machine?",
+                    )
+                  ) {
+                    return;
+                  }
+                  void clearImpactEvents()
+                    .then(() => setMessage("Impact history cleared."))
+                    .catch((err: unknown) => {
+                      setError(
+                        err instanceof Error
+                          ? err.message
+                          : "Failed to clear impact history",
+                      );
+                    });
+                }}
+                className="px-md h-9 rounded-lg border border-border font-label-md text-label-md self-start"
+              >
+                Clear impact history
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {error && (
+          <p className="font-body-sm text-body-sm text-danger">{error}</p>
+        )}
+        {message && (
+          <p className="font-body-sm text-body-sm text-primary">{message}</p>
+        )}
+
+        <section className="space-y-lg">
+          <h3 className="font-label-caps text-label-caps text-on-surface-variant border-b border-border pb-xs uppercase tracking-widest">
+            GitHub (optional)
+          </h3>
+          <p className="font-body-sm text-body-sm text-on-surface-variant">
+            Connect to import repos into Library for cross-repo search. Token is
+            stored only under{" "}
+            <code className="font-technical-mono-sm text-technical-mono-sm text-primary">
+              ~/.mycelium/secrets/
+            </code>
+            .
+          </p>
+          <div className="p-md rounded-lg border border-border bg-surface-container-lowest flex flex-col gap-sm">
+            <div className="flex items-center justify-between gap-md">
+              <div>
+                <p className="font-label-md text-label-md text-on-surface">
+                  {github?.connected
+                    ? `Connected as @${github.login}`
+                    : "Not connected"}
+                </p>
+                <p className="font-technical-mono-sm text-technical-mono-sm text-muted">
+                  {github?.connected
+                    ? `mode=${github.auth_mode}`
+                    : github?.oauth_configured
+                      ? "OAuth device + PAT available"
+                      : "PAT available · set client_id for device OAuth"}
+                </p>
+              </div>
+              {github?.connected ? (
+                <button
+                  type="button"
+                  onClick={() => void onDisconnect()}
+                  className="px-md h-9 rounded-lg border border-border font-label-md text-label-md"
+                >
+                  Disconnect
+                </button>
+              ) : null}
+            </div>
+
+            {!github?.connected && (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-md items-start pt-sm">
+                  <div className="md:col-span-1">
+                    <label className="font-label-md text-label-md text-foreground">
+                      OAuth client_id
+                    </label>
+                  </div>
+                  <div className="md:col-span-3 flex gap-sm">
+                    <input
+                      className="flex-1 bg-surface-container border border-border rounded-lg h-10 px-md font-technical-mono text-technical-mono text-foreground focus:outline-none focus:border-primary"
+                      value={githubClientId}
+                      onChange={(e) => setGithubClientId(e.target.value)}
+                      placeholder="From GitHub → Settings → Developer settings"
+                    />
+                    <button
+                      type="button"
+                      disabled={polling || !githubClientId.trim()}
+                      onClick={() => void onDeviceStart()}
+                      className="px-md h-10 rounded-xl bg-primary text-on-primary font-label-md text-label-md disabled:opacity-50"
+                    >
+                      {polling ? "Waiting…" : "Device login"}
+                    </button>
+                  </div>
+                </div>
+                {deviceCode && (
+                  <p className="font-body-sm text-body-sm text-on-surface">
+                    Open{" "}
+                    <a
+                      className="text-primary underline"
+                      href={deviceUri ?? "https://github.com/login/device"}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {deviceUri}
+                    </a>{" "}
+                    and enter code{" "}
+                    <code className="font-technical-mono text-technical-mono text-primary">
+                      {deviceCode}
+                    </code>
+                  </p>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-md items-start">
+                  <div className="md:col-span-1">
+                    <label className="font-label-md text-label-md text-foreground">
+                      Or paste PAT
+                    </label>
+                  </div>
+                  <div className="md:col-span-3 flex gap-sm">
+                    <input
+                      className="flex-1 bg-surface-container border border-border rounded-lg h-10 px-md font-technical-mono text-technical-mono text-foreground focus:outline-none focus:border-primary"
+                      type="password"
+                      value={pat}
+                      onChange={(e) => setPat(e.target.value)}
+                      placeholder="ghp_… or github_pat_…"
+                    />
+                    <button
+                      type="button"
+                      disabled={!pat.trim()}
+                      onClick={() => void onSavePat()}
+                      className="px-md h-10 rounded-xl border border-border font-label-md text-label-md disabled:opacity-50"
+                    >
+                      Save token
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </section>
 
@@ -43,35 +337,14 @@ export function SettingsPage() {
               <label className="font-label-md text-label-md text-foreground block">
                 Vault path
               </label>
-              <span className="font-body-sm text-body-sm text-on-surface-variant block mt-xs">
-                Root directory for semantic indices and metadata.
-              </span>
             </div>
             <div className="md:col-span-3">
-              <div className="flex gap-sm">
-                <input
-                  className="flex-1 bg-surface-container border border-border rounded-lg h-10 px-md font-technical-mono text-technical-mono text-primary focus:outline-none focus:border-primary transition-colors duration-150"
-                  type="text"
-                  defaultValue="~/mycelium-vault"
-                />
-                <button
-                  type="button"
-                  className="px-md h-10 border border-border rounded-lg bg-surface-container-high text-foreground font-label-md text-label-md hover:bg-surface-variant transition-colors duration-150 flex items-center gap-xs"
-                >
-                  <span className="material-symbols-outlined text-[16px]">
-                    folder_open
-                  </span>
-                  Browse
-                </button>
-              </div>
-              <div className="mt-sm flex items-center gap-xs text-on-surface-variant">
-                <span className="material-symbols-outlined text-[14px]">
-                  info
-                </span>
-                <span className="font-technical-mono-sm text-technical-mono-sm">
-                  Space available: 124.5 GB on /dev/disk1s5
-                </span>
-              </div>
+              <input
+                className="w-full bg-surface-container border border-border rounded-lg h-10 px-md font-technical-mono text-technical-mono text-primary focus:outline-none focus:border-primary transition-colors duration-150"
+                type="text"
+                value={vaultDir}
+                onChange={(e) => setVaultDir(e.target.value)}
+              />
             </div>
           </div>
         </section>
@@ -86,29 +359,22 @@ export function SettingsPage() {
                 Embedding model
               </label>
               <span className="font-body-sm text-body-sm text-on-surface-variant block mt-xs">
-                Model used for code and docs vectorization.
+                Active: {runtime.model_id ?? settings?.embedding_model ?? "…"} (
+                {runtime.backend ?? "…"})
               </span>
             </div>
             <div className="md:col-span-3">
-              <div className="relative">
-                <select
-                  className="w-full bg-surface-container border border-border rounded-lg h-10 px-md pr-xl font-technical-mono text-technical-mono text-foreground appearance-none focus:outline-none focus:border-primary transition-colors duration-150"
-                  defaultValue="jina-embeddings-v2-base-code"
-                >
-                  <option value="jina-embeddings-v2-base-code">
-                    jina-embeddings-v2-base-code (8192 ctx)
+              <select
+                className="w-full bg-surface-container border border-border rounded-lg h-10 px-md font-technical-mono text-technical-mono text-foreground focus:outline-none focus:border-primary transition-colors duration-150"
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+              >
+                {[model, ...MODEL_OPTIONS.filter((m) => m !== model)].map((m) => (
+                  <option key={m} value={m}>
+                    {m}
                   </option>
-                  <option value="nomic-embed-text-v1.5">
-                    nomic-embed-text-v1.5 (8192 ctx)
-                  </option>
-                  <option value="bge-small-en-v1.5">
-                    bge-small-en-v1.5 (512 ctx)
-                  </option>
-                </select>
-                <span className="material-symbols-outlined absolute right-md top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[18px]">
-                  expand_more
-                </span>
-              </div>
+                ))}
+              </select>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-md items-start pt-md">
@@ -116,30 +382,26 @@ export function SettingsPage() {
               <label className="font-label-md text-label-md text-foreground block">
                 Git history depth
               </label>
-              <span className="font-body-sm text-body-sm text-on-surface-variant block mt-xs">
-                Commits to parse per repository for context.
-              </span>
             </div>
             <div className="md:col-span-3">
-              <div className="flex items-center gap-sm">
-                <input
-                  className="w-24 bg-surface-container border border-border rounded-lg h-10 px-sm font-technical-mono text-technical-mono text-foreground text-center focus:outline-none focus:border-primary transition-colors duration-150"
-                  type="number"
-                  defaultValue={500}
-                />
-                <span className="font-body-sm text-body-sm text-on-surface-variant">
-                  commits
-                </span>
-              </div>
+              <input
+                className="w-24 bg-surface-container border border-border rounded-lg h-10 px-sm font-technical-mono text-technical-mono text-foreground text-center focus:outline-none focus:border-primary transition-colors duration-150"
+                type="number"
+                min={1}
+                value={historyDepth}
+                onChange={(e) => setHistoryDepth(Number(e.target.value) || 1)}
+              />
             </div>
           </div>
           <div className="flex justify-end pt-lg">
             <button
               type="button"
-              className="px-xl h-10 rounded-xl bg-primary text-on-primary font-label-md text-label-md hover:brightness-110 transition-all duration-150 flex items-center gap-sm"
+              disabled={saving || !settings}
+              onClick={() => void onApply()}
+              className="px-xl h-10 rounded-xl bg-primary text-on-primary font-label-md text-label-md hover:brightness-110 transition-all duration-150 flex items-center gap-sm disabled:opacity-50"
             >
               <span className="material-symbols-outlined text-[18px]">save</span>
-              Apply Changes
+              {saving ? "Saving…" : "Apply Changes"}
             </button>
           </div>
         </section>

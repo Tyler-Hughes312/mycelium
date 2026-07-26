@@ -6,9 +6,13 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
+CURRENT_CONFIG_VERSION = 1
+
 DEFAULT_CONFIG_TOML = """\
 # Mycelium local configuration
 # Code and Vault contents stay on this machine by default (FR-19 / AD-2).
+
+config_version = 1
 
 [network]
 # When false, Core will not upload repo/Vault contents to remote services.
@@ -20,6 +24,9 @@ allow_remote_llm = false
 # Bind address for the local HTTP API (AD-2).
 host = "127.0.0.1"
 port = 8787
+# Optional shared secret for local multi-process clients (off by default).
+# When set, clients must send Authorization: Bearer <token>.
+api_token = ""
 
 [paths]
 # Relative to ~/.mycelium unless absolute.
@@ -31,9 +38,19 @@ vault_dir = "vault"
 history_depth = 500
 
 [embedding]
-# Default is fully offline hashing (no download). Set to a sentence-transformers
-# model id (e.g. jinaai/jina-embeddings-v2-base-code) to use a cached HF model.
-model = "mycelium-hashing-v1"
+# Local sentence-transformers model (downloads once into ~/.mycelium/models).
+# Alternatives: jinaai/jina-embeddings-v2-base-code | mycelium-hashing-v1 (tests)
+model = "sentence-transformers/all-MiniLM-L6-v2"
+
+[github]
+# Optional OAuth App client_id for device login (or set MYCELIUM_GITHUB_CLIENT_ID).
+# Create at https://github.com/settings/developers — enable Device Flow.
+# PAT paste in Settings works without this.
+client_id = ""
+
+[impact]
+# Local token-savings estimates for recall (search / focus / vault pack). No cloud.
+tracking_enabled = true
 """
 
 
@@ -55,6 +72,7 @@ class NetworkPolicy:
 class ServerBind:
     host: str
     port: int
+    api_token: str = ""
 
 
 @dataclass(frozen=True)
@@ -68,16 +86,92 @@ class EmbeddingSettings:
 
 
 @dataclass(frozen=True)
+class GitHubSettings:
+    client_id: str = ""
+
+
+@dataclass(frozen=True)
+class ImpactSettings:
+    tracking_enabled: bool = True
+
+
+@dataclass(frozen=True)
 class MyceliumConfig:
     paths: MyceliumPaths
     network: NetworkPolicy
     server: ServerBind
     index: IndexSettings
     embedding: EmbeddingSettings
+    github: GitHubSettings = GitHubSettings()
+    impact: ImpactSettings = ImpactSettings()
+    config_version: int = CURRENT_CONFIG_VERSION
 
 
 def default_home() -> Path:
     return Path.home() / ".mycelium"
+
+
+def migrate_config_raw(raw: dict, config_file: Path) -> dict:
+    """Migrate-on-load stub: ensure config_version is present and current.
+
+    Future migrations bump CURRENT_CONFIG_VERSION and rewrite here.
+    """
+    version = int(raw.get("config_version", 0) or 0)
+    if version >= CURRENT_CONFIG_VERSION:
+        return raw
+
+    # v0 → v1: stamp version; preserve all existing keys.
+    raw = dict(raw)
+    raw["config_version"] = CURRENT_CONFIG_VERSION
+    # Rewrite TOML lightly via reload path after parse — caller may persist.
+    _rewrite_migrated(config_file, raw)
+    return raw
+
+
+def _rewrite_migrated(config_file: Path, raw: dict) -> None:
+    """Persist a migrated raw dict without losing user fields we know about."""
+    net = raw.get("network", {})
+    srv = raw.get("server", {})
+    paths = raw.get("paths", {})
+    index = raw.get("index", {})
+    emb = raw.get("embedding", {})
+    gh = raw.get("github", {})
+    impact = raw.get("impact", {})
+    token = str(srv.get("api_token", "") or "")
+    client_id = str(gh.get("client_id", "") or "").replace('"', '\\"')
+    tracking = bool(impact.get("tracking_enabled", True))
+    text = f"""\
+# Mycelium local configuration
+# Code and Vault contents stay on this machine by default (FR-19 / AD-2).
+
+config_version = {CURRENT_CONFIG_VERSION}
+
+[network]
+allow_code_upload = {"true" if bool(net.get("allow_code_upload", False)) else "false"}
+allow_remote_llm = {"true" if bool(net.get("allow_remote_llm", False)) else "false"}
+
+[server]
+host = "{srv.get("host", "127.0.0.1")}"
+port = {int(srv.get("port", 8787))}
+api_token = "{token}"
+
+[paths]
+data_dir = "{paths.get("data_dir", "data")}"
+vault_dir = "{paths.get("vault_dir", "vault")}"
+
+[index]
+history_depth = {int(index.get("history_depth", 500))}
+
+[embedding]
+model = "{emb.get("model", "sentence-transformers/all-MiniLM-L6-v2")}"
+
+[github]
+client_id = "{client_id}"
+
+[impact]
+tracking_enabled = {"true" if tracking else "false"}
+"""
+    config_file.write_text(text, encoding="utf-8")
 
 
 def ensure_local_layout(home: Path | None = None) -> MyceliumConfig:
@@ -87,16 +181,24 @@ def ensure_local_layout(home: Path | None = None) -> MyceliumConfig:
     config_file = root / "config.toml"
     if not config_file.exists():
         config_file.write_text(DEFAULT_CONFIG_TOML, encoding="utf-8")
+    return load_config(root)
 
+
+def load_config(home: Path | None = None) -> MyceliumConfig:
+    root = home or default_home()
+    config_file = root / "config.toml"
     raw = tomllib.loads(config_file.read_text(encoding="utf-8"))
+    raw = migrate_config_raw(raw, config_file)
     paths_cfg = raw.get("paths", {})
     net_cfg = raw.get("network", {})
     srv_cfg = raw.get("server", {})
     index_cfg = raw.get("index", {})
     emb_cfg = raw.get("embedding", {})
+    gh_cfg = raw.get("github", {})
+    impact_cfg = raw.get("impact", {})
 
     def resolve(p: str, fallback: str) -> Path:
-        candidate = Path(p or fallback)
+        candidate = Path(p or fallback).expanduser()
         return candidate if candidate.is_absolute() else root / candidate
 
     data_dir = resolve(str(paths_cfg.get("data_dir", "data")), "data")
@@ -104,11 +206,18 @@ def ensure_local_layout(home: Path | None = None) -> MyceliumConfig:
     data_dir.mkdir(parents=True, exist_ok=True)
     vault_dir.mkdir(parents=True, exist_ok=True)
 
+    from mycelium.adapters.vault.scaffold import scaffold_vault
+
+    scaffold_vault(vault_dir)
+
     depth = int(index_cfg.get("history_depth", 500))
     if depth < 1:
         depth = 500
 
-    model = str(emb_cfg.get("model", "mycelium-hashing-v1")).strip() or "mycelium-hashing-v1"
+    from mycelium.adapters.embeddings.bootstrap import DEFAULT_EMBEDDING_MODEL
+
+    model = str(emb_cfg.get("model", DEFAULT_EMBEDDING_MODEL)).strip() or DEFAULT_EMBEDDING_MODEL
+    client_id = str(gh_cfg.get("client_id", "") or "").strip()
 
     return MyceliumConfig(
         paths=MyceliumPaths(
@@ -124,7 +233,156 @@ def ensure_local_layout(home: Path | None = None) -> MyceliumConfig:
         server=ServerBind(
             host=str(srv_cfg.get("host", "127.0.0.1")),
             port=int(srv_cfg.get("port", 8787)),
+            api_token=str(srv_cfg.get("api_token", "") or ""),
         ),
         index=IndexSettings(history_depth=depth),
         embedding=EmbeddingSettings(model=model),
+        github=GitHubSettings(client_id=client_id),
+        impact=ImpactSettings(
+            tracking_enabled=bool(impact_cfg.get("tracking_enabled", True))
+        ),
+        config_version=int(raw.get("config_version", CURRENT_CONFIG_VERSION)),
     )
+
+
+def _path_for_toml(home: Path, path: Path) -> str:
+    try:
+        rel = path.resolve().relative_to(home.resolve())
+        return rel.as_posix()
+    except ValueError:
+        return str(path.resolve())
+
+
+def write_config(cfg: MyceliumConfig) -> None:
+    """Persist config.toml from a MyceliumConfig snapshot."""
+    home = cfg.paths.home
+    token = cfg.server.api_token.replace("\\", "\\\\").replace('"', '\\"')
+    client_id = cfg.github.client_id.replace("\\", "\\\\").replace('"', '\\"')
+    text = f"""\
+# Mycelium local configuration
+# Code and Vault contents stay on this machine by default (FR-19 / AD-2).
+
+config_version = {cfg.config_version}
+
+[network]
+allow_code_upload = {"true" if cfg.network.allow_code_upload else "false"}
+allow_remote_llm = {"true" if cfg.network.allow_remote_llm else "false"}
+
+[server]
+host = "{cfg.server.host}"
+port = {cfg.server.port}
+api_token = "{token}"
+
+[paths]
+data_dir = "{_path_for_toml(home, cfg.paths.data_dir)}"
+vault_dir = "{_path_for_toml(home, cfg.paths.vault_dir)}"
+
+[index]
+history_depth = {cfg.index.history_depth}
+
+[embedding]
+model = "{cfg.embedding.model}"
+
+[github]
+client_id = "{client_id}"
+
+[impact]
+tracking_enabled = {"true" if cfg.impact.tracking_enabled else "false"}
+"""
+    cfg.paths.config_file.write_text(text, encoding="utf-8")
+    cfg.paths.data_dir.mkdir(parents=True, exist_ok=True)
+    cfg.paths.vault_dir.mkdir(parents=True, exist_ok=True)
+
+
+def update_config(
+    home: Path | None = None,
+    *,
+    vault_dir: str | None = None,
+    history_depth: int | None = None,
+    embedding_model: str | None = None,
+    allow_code_upload: bool | None = None,
+    allow_remote_llm: bool | None = None,
+    github_client_id: str | None = None,
+    impact_tracking_enabled: bool | None = None,
+) -> MyceliumConfig:
+    """Patch selected settings and rewrite config.toml."""
+    cfg = load_config(home)
+    root = cfg.paths.home
+
+    new_vault = cfg.paths.vault_dir
+    if vault_dir is not None:
+        candidate = Path(vault_dir).expanduser()
+        new_vault = candidate if candidate.is_absolute() else root / candidate
+
+    new_depth = cfg.index.history_depth
+    if history_depth is not None:
+        new_depth = max(1, int(history_depth))
+
+    new_model = cfg.embedding.model
+    if embedding_model is not None and embedding_model.strip():
+        new_model = embedding_model.strip()
+
+    new_net = NetworkPolicy(
+        allow_code_upload=(
+            cfg.network.allow_code_upload
+            if allow_code_upload is None
+            else bool(allow_code_upload)
+        ),
+        allow_remote_llm=(
+            cfg.network.allow_remote_llm
+            if allow_remote_llm is None
+            else bool(allow_remote_llm)
+        ),
+    )
+
+    new_gh = cfg.github
+    if github_client_id is not None:
+        new_gh = GitHubSettings(client_id=github_client_id.strip())
+
+    new_impact = cfg.impact
+    if impact_tracking_enabled is not None:
+        new_impact = ImpactSettings(tracking_enabled=bool(impact_tracking_enabled))
+
+    updated = MyceliumConfig(
+        paths=MyceliumPaths(
+            home=root,
+            config_file=cfg.paths.config_file,
+            data_dir=cfg.paths.data_dir,
+            vault_dir=new_vault,
+        ),
+        network=new_net,
+        server=cfg.server,
+        index=IndexSettings(history_depth=new_depth),
+        embedding=EmbeddingSettings(model=new_model),
+        github=new_gh,
+        impact=new_impact,
+        config_version=cfg.config_version,
+    )
+    write_config(updated)
+    return load_config(root)
+
+
+def settings_dict(cfg: MyceliumConfig) -> dict:
+    return {
+        "vault_dir": str(cfg.paths.vault_dir),
+        "data_dir": str(cfg.paths.data_dir),
+        "config_file": str(cfg.paths.config_file),
+        "config_version": cfg.config_version,
+        "history_depth": cfg.index.history_depth,
+        "embedding_model": cfg.embedding.model,
+        "allow_code_upload": cfg.network.allow_code_upload,
+        "allow_remote_llm": cfg.network.allow_remote_llm,
+        "impact_tracking_enabled": cfg.impact.tracking_enabled,
+        "api_token_enabled": bool(cfg.server.api_token),
+        "github_client_id": cfg.github.client_id,
+        "github_oauth_configured": bool(cfg.github.client_id),
+        "server": {"host": cfg.server.host, "port": cfg.server.port},
+        "privacy": {
+            "local_first": True,
+            "cloud_account_required": False,
+            "summary": (
+                "Code and Vault stay on this machine by default. "
+                "No cloud account is required. GitHub connect is optional."
+            ),
+        },
+    }
