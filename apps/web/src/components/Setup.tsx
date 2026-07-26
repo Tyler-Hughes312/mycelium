@@ -37,18 +37,28 @@ export function Setup() {
             </li>
           ))}
         </ol>
-        <p className="mt-10 text-sm text-[var(--color-muted)]">
-          macOS Gatekeeper / Windows SmartScreen notes:{" "}
+        <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
           <a
-            href={LINKS.desktopInstallDoc}
+            href={LINKS.releases}
             target="_blank"
             rel="noreferrer"
-            className="cursor-pointer text-[var(--color-teal)] underline-offset-4 transition-colors duration-200 hover:underline"
+            className="btn-primary"
           >
-            Desktop install guide
+            Download Desktop
           </a>
-          .
-        </p>
+          <p className="text-sm text-[var(--color-muted)]">
+            macOS Gatekeeper / Windows SmartScreen notes:{" "}
+            <a
+              href={LINKS.desktopInstallDoc}
+              target="_blank"
+              rel="noreferrer"
+              className="cursor-pointer text-[var(--color-teal)] underline-offset-4 transition-colors duration-200 hover:underline"
+            >
+              Desktop install guide
+            </a>
+            .
+          </p>
+        </div>
       </div>
     </section>
   );

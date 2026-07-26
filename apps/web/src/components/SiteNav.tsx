@@ -2,8 +2,9 @@ import { LINKS } from "../content";
 
 const NAV_LINKS = [
   { href: "#features", label: "Features" },
+  { href: "#why", label: "Why" },
   { href: "#setup", label: "Setup" },
-  { href: "#download", label: "Download" },
+  { href: "#impact", label: "Impact" },
 ] as const;
 
 const linkClass =
@@ -31,6 +32,16 @@ export function SiteNav() {
               </a>
             </li>
           ))}
+          <li>
+            <a
+              href={LINKS.releases}
+              target="_blank"
+              rel="noreferrer"
+              className={linkClass}
+            >
+              Download
+            </a>
+          </li>
           <li>
             <a
               href={LINKS.github}

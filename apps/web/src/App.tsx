@@ -2,9 +2,10 @@ import { useRef } from "react";
 import { useScrollTheater } from "./hooks/useScrollTheater";
 import { SiteNav } from "./components/SiteNav";
 import { Hero } from "./components/Hero";
+import { Outcomes } from "./components/Outcomes";
 import { Capabilities } from "./components/Capabilities";
 import { Setup } from "./components/Setup";
-import { GetIt } from "./components/GetIt";
+import { Impact } from "./components/Impact";
 import { SiteFooter } from "./components/SiteFooter";
 
 export default function App() {
@@ -17,8 +18,9 @@ export default function App() {
       <main>
         <Hero />
         <Capabilities />
+        <Outcomes />
         <Setup />
-        <GetIt />
+        <Impact />
       </main>
       <SiteFooter />
     </div>

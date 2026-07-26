@@ -15,3 +15,48 @@ test("capabilities cover five surfaces in order", async () => {
     ["library", "index", "search", "vault", "agents"],
   );
 });
+
+test("outcomes cover token savings reuse and scale", async () => {
+  const { OUTCOMES } = await import("./content.ts");
+  assert.deepEqual(
+    OUTCOMES.map((o) => o.id),
+    ["tokens", "quality", "reuse", "scale", "local"],
+  );
+  const blob = OUTCOMES.map((o) => `${o.title} ${o.body}`).join(" ").toLowerCase();
+  assert.match(blob, /token/);
+  assert.match(blob, /reuse/);
+  assert.match(blob, /large|monorepo/);
+});
+
+test("setup never tells users to run shell installers", async () => {
+  const { SETUP_STEPS, CAPABILITIES } = await import("./content.ts");
+  const blob = [...SETUP_STEPS, ...CAPABILITIES]
+    .map((s) => ("body" in s ? `${"title" in s ? s.title : ""} ${s.body}` : ""))
+    .join("\n")
+    .toLowerCase();
+  assert.equal(blob.includes("install.sh"), false);
+  assert.equal(blob.includes("dev.sh"), false);
+  assert.equal(blob.includes("./scripts"), false);
+});
+
+test("impact metrics cover tokens packet reuse grounded with illustrative disclaimer", async () => {
+  const { IMPACT_INTRO, IMPACT_METRICS, IMPACT_DISCLAIMER } = await import(
+    "./content.ts"
+  );
+  assert.equal(IMPACT_INTRO.eyebrow, "Impact");
+  assert.match(IMPACT_INTRO.headline.toLowerCase(), /token|fewer|sharper/);
+  assert.deepEqual(
+    IMPACT_METRICS.map((m) => m.id),
+    ["tokens", "packet", "reuse", "grounded"],
+  );
+  for (const m of IMPACT_METRICS) {
+    assert.ok(m.stat.length > 0, `${m.id} needs a display stat`);
+    assert.ok(m.title.length > 0, `${m.id} needs a title`);
+    assert.ok(m.body.length > 0, `${m.id} needs a body`);
+  }
+  const blob = IMPACT_METRICS.map((m) => `${m.stat} ${m.title} ${m.body}`)
+    .join(" ")
+    .toLowerCase();
+  assert.match(blob, /token/);
+  assert.match(IMPACT_DISCLAIMER.toLowerCase(), /illustrative/);
+});

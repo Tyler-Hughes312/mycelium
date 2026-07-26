@@ -31,8 +31,18 @@ export function SiteFooter() {
               </a>
             </li>
             <li>
+              <a href="#why" className={footerLink}>
+                Why
+              </a>
+            </li>
+            <li>
               <a href="#setup" className={footerLink}>
                 Setup
+              </a>
+            </li>
+            <li>
+              <a href="#impact" className={footerLink}>
+                Impact
               </a>
             </li>
             <li>

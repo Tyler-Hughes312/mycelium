@@ -1,7 +1,7 @@
 # Impact Metrics — Design Spec
 
 **Date:** 2026-07-26  
-**Status:** Draft — awaiting user review before implementation plan  
+**Status:** Phase 1 plan at `docs/superpowers/plans/2026-07-26-impact-metrics-web.md` — Phase 2 Desktop telemetry still follow-up  
 **Product:** [Mycelium](https://github.com/Tyler-Hughes312/mycelium) — local-first context layer  
 **Related:** `docs/superpowers/specs/2026-07-26-mycelium-marketing-site-design.md`
 
