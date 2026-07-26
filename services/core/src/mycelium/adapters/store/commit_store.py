@@ -46,9 +46,13 @@ class JsonCommitStore:
         return len(data)
 
     def list_commits(self, *, limit: int = 50) -> list[dict[str, Any]]:
+        rows = self.list_all()
+        return rows[: max(0, limit)]
+
+    def list_all(self) -> list[dict[str, Any]]:
         rows = list(self._read().values())
         rows.sort(key=lambda r: r.get("timestamp", ""), reverse=True)
-        return rows[: max(0, limit)]
+        return rows
 
     def count(self) -> int:
         return len(self._read())

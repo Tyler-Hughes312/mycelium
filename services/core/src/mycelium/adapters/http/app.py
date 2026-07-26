@@ -10,79 +10,38 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from mycelium import __version__
+from mycelium.adapters.embeddings.bootstrap import bootstrap_embedder, status_dict
 from mycelium.adapters.git import GitError
+from mycelium.adapters.git.watcher import WorkspaceWatcherManager
 from mycelium.adapters.store import JsonFileWorkspaceRepo, WorkspaceError
 from mycelium.core.config import MyceliumConfig, ensure_local_layout
 from mycelium.core.domain.index_service import IndexService
+from mycelium.core.domain.rag_service import RagService
 
 # Default bind for docs / run helpers (AD-2). Actual uvicorn host should be 127.0.0.1.
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8787
 
-MOCK_RESULTS: list[dict[str, Any]] = [
-    {
-        "title": "rateLimitMiddleware Implementation",
-        "kind": "Symbol",
-        "snippet": "export const rateLimitMiddleware = (req, res, next) => { ... // handles 429 backoff",
-        "path": "src/api/middleware.ts",
-        "meta": [
-            {"icon": "folder", "text": "src/api/middleware.ts"},
-            {"icon": "schedule", "text": "2d ago"},
-        ],
-        "score": 0.94,
-    },
-    {
-        "title": "Update Redis ratelimit configuration",
-        "kind": "Commit",
-        "snippet": "Increased bucket size for tier 2 users to prevent premature throttling during spikes.",
-        "path": "sha:8f4a2b9",
-        "meta": [
-            {"icon": "commit", "text": "sha:8f4a2b9"},
-            {"icon": "person", "text": "jdoe"},
-        ],
-        "score": 0.88,
-    },
-    {
-        "title": "API Scaling Strategy Q3",
-        "kind": "Note",
-        "snippet": "...we decided to handle rate limits at the edge using Cloudflare workers before hitting...",
-        "path": "vault/architecture/scaling.md",
-        "meta": [{"icon": "folder", "text": "vault/architecture/scaling.md"}],
-        "score": 0.81,
-    },
-    {
-        "title": "config.yml",
-        "kind": "File",
-        "snippet": 'rate_limit: { enabled: true, strategy: "token_bucket", default_limit: 100 }',
-        "path": "deploy/production/config.yml",
-        "meta": [{"icon": "folder", "text": "deploy/production/config.yml"}],
-        "score": 0.76,
-    },
-    {
-        "title": "checkRateLimit",
-        "kind": "Symbol",
-        "snippet": "async function checkRateLimit(clientId: string): Promise<boolean> { ...",
-        "path": "src/services/auth.ts",
-        "meta": [{"icon": "folder", "text": "src/services/auth.ts"}],
-        "score": 0.71,
-    },
-    {
-        "title": "Fix rate limit bypass bug in auth flow",
-        "kind": "Commit",
-        "snippet": "Resolved issue where unauthenticated users were not hitting the default IP-based rate limit bucket.",
-        "path": "sha:d4e5f6a",
-        "meta": [{"icon": "commit", "text": "sha:d4e5f6a"}],
-        "score": 0.68,
-    },
-]
-
 
 class QueryRequest(BaseModel):
     query: str
+    workspace_id: str = Field(..., min_length=1)
     limit: int = Field(default=8, ge=1, le=10)
 
 
+class FocusRequest(BaseModel):
+    workspace_id: str = Field(..., min_length=1)
+    path: str = Field(..., min_length=1)
+    symbol: str | None = None
+    line: int | None = None
+    limit: int = Field(default=10, ge=1, le=10)
+
+
 class RegisterWorkspaceRequest(BaseModel):
+    path: str = Field(..., min_length=1)
+
+
+class FileChangedHookRequest(BaseModel):
     path: str = Field(..., min_length=1)
 
 
@@ -100,14 +59,37 @@ def create_app(config: MyceliumConfig | None = None) -> FastAPI:
     async def lifespan(application: FastAPI):
         cfg = config or ensure_local_layout()
         repo = JsonFileWorkspaceRepo(cfg.paths.data_dir)
-        application.state.mycelium_config = cfg
-        application.state.workspace_repo = repo
-        application.state.index_service = IndexService(
+        runtime, emb_status = bootstrap_embedder(
+            model=cfg.embedding.model,
+            cache_dir=cfg.paths.home / "models",
+        )
+        index = IndexService(
             data_dir=cfg.paths.data_dir,
             workspace_repo=repo,
             history_depth=cfg.index.history_depth,
+            embedding_runtime=runtime,
+            embedding_status=emb_status,
+            embedding_model=cfg.embedding.model,
         )
-        yield
+        rag = RagService(
+            data_dir=cfg.paths.data_dir,
+            workspace_repo=repo,
+            runtime=runtime,
+            status=emb_status,
+            model=cfg.embedding.model,
+        )
+        watchers = WorkspaceWatcherManager(index)
+        watchers.start_all(repo.list_workspaces())
+        application.state.mycelium_config = cfg
+        application.state.workspace_repo = repo
+        application.state.index_service = index
+        application.state.rag_service = rag
+        application.state.embedding_status = emb_status
+        application.state.watchers = watchers
+        try:
+            yield
+        finally:
+            watchers.stop_all()
 
     application = FastAPI(
         title="Mycelium Core",
@@ -131,9 +113,16 @@ def create_app(config: MyceliumConfig | None = None) -> FastAPI:
     def index_service() -> IndexService:
         return application.state.index_service
 
+    def rag_service() -> RagService:
+        return application.state.rag_service
+
+    def watchers() -> WorkspaceWatcherManager:
+        return application.state.watchers
+
     @application.get("/health")
     def health() -> dict[str, Any]:
         cfg: MyceliumConfig | None = getattr(application.state, "mycelium_config", None)
+        emb = getattr(application.state, "embedding_status", None)
         payload: dict[str, Any] = {
             "status": "ok",
             "service": "mycelium-core",
@@ -153,7 +142,33 @@ def create_app(config: MyceliumConfig | None = None) -> FastAPI:
                 "data": str(cfg.paths.data_dir),
             }
             payload["index"] = {"history_depth": cfg.index.history_depth}
+            payload["embedding"] = {
+                "configured_model": cfg.embedding.model,
+                **(status_dict(emb) if emb is not None else {}),
+            }
         return payload
+
+    @application.get("/embeddings/status")
+    def embeddings_status() -> dict[str, Any]:
+        cfg: MyceliumConfig = application.state.mycelium_config
+        emb = application.state.embedding_status
+        return {
+            "configured_model": cfg.embedding.model,
+            **status_dict(emb),
+        }
+
+    @application.post("/workspaces/{workspace_id}/embeddings")
+    def embed_workspace(workspace_id: str) -> dict[str, Any]:
+        try:
+            stats = index_service().embedding_service.embed_workspace(workspace_id)
+        except WorkspaceError as exc:
+            if exc.code == "not_found":
+                raise HTTPException(
+                    status_code=404,
+                    detail={"code": exc.code, "message": exc.message},
+                ) from exc
+            raise _http_error(exc) from exc
+        return {"embedding": stats}
 
     @application.get("/workspaces")
     def list_workspaces() -> dict[str, Any]:
@@ -165,12 +180,13 @@ def create_app(config: MyceliumConfig | None = None) -> FastAPI:
             row = workspace_repo().register(body.path)
         except WorkspaceError as exc:
             raise _http_error(exc) from exc
+        watchers().start(row["id"], row["path"])
         return {"workspace": row}
 
     @application.post("/workspaces/{workspace_id}/index")
     def start_index(workspace_id: str) -> dict[str, Any]:
         try:
-            result = index_service().run_initial_index(workspace_id)
+            status = index_service().start_index_async(workspace_id)
         except WorkspaceError as exc:
             if exc.code == "not_found":
                 raise HTTPException(
@@ -178,19 +194,17 @@ def create_app(config: MyceliumConfig | None = None) -> FastAPI:
                     detail={"code": exc.code, "message": exc.message},
                 ) from exc
             raise _http_error(exc) from exc
-        except GitError as exc:
-            raise _http_error(exc) from exc
-        return {
-            "index": {
-                "workspace_id": result.workspace_id,
-                "status": result.status,
-                "commits_indexed": result.commits_indexed,
-                "commits_total": result.commits_total,
-                "depth": result.depth,
-                "finished_at": result.finished_at,
-                "message": result.message,
-            }
-        }
+        return {"status": status, "accepted": True}
+
+    @application.post("/workspaces/{workspace_id}/index/cancel")
+    def cancel_index(workspace_id: str) -> dict[str, Any]:
+        if workspace_repo().get(workspace_id) is None:
+            raise HTTPException(
+                status_code=404,
+                detail={"code": "not_found", "message": f"Unknown workspace id: {workspace_id}"},
+            )
+        status = index_service().request_cancel(workspace_id)
+        return {"status": status}
 
     @application.get("/workspaces/{workspace_id}/index/status")
     def index_status(workspace_id: str) -> dict[str, Any]:
@@ -207,6 +221,7 @@ def create_app(config: MyceliumConfig | None = None) -> FastAPI:
                 "status": "idle",
                 "progress": 0,
                 "message": "No index run yet",
+                "cancellable": False,
             }
         }
 
@@ -223,15 +238,90 @@ def create_app(config: MyceliumConfig | None = None) -> FastAPI:
             raise _http_error(exc) from exc
         return {"commits": rows, "count": len(rows)}
 
+    @application.get("/workspaces/{workspace_id}/symbols")
+    def list_symbols(workspace_id: str, limit: int = 100) -> dict[str, Any]:
+        try:
+            rows = index_service().list_symbols(workspace_id, limit=min(max(limit, 1), 1000))
+        except WorkspaceError as exc:
+            if exc.code == "not_found":
+                raise HTTPException(
+                    status_code=404,
+                    detail={"code": exc.code, "message": exc.message},
+                ) from exc
+            raise _http_error(exc) from exc
+        return {"symbols": rows, "count": len(rows)}
+
+    @application.get("/workspaces/{workspace_id}/edges")
+    def list_edges(
+        workspace_id: str,
+        kind: str | None = "co_changed",
+        limit: int = 100,
+    ) -> dict[str, Any]:
+        try:
+            rows = index_service().list_edges(
+                workspace_id,
+                kind=kind,
+                limit=min(max(limit, 1), 1000),
+            )
+        except WorkspaceError as exc:
+            if exc.code == "not_found":
+                raise HTTPException(
+                    status_code=404,
+                    detail={"code": exc.code, "message": exc.message},
+                ) from exc
+            raise _http_error(exc) from exc
+        return {"edges": rows, "count": len(rows)}
+
+    @application.post("/workspaces/{workspace_id}/hooks/file-changed")
+    def file_changed_hook(
+        workspace_id: str,
+        body: FileChangedHookRequest,
+    ) -> dict[str, Any]:
+        """Editor/FS hook: incrementally reindex one file (FR-4)."""
+        try:
+            result = index_service().reindex_file(workspace_id, body.path)
+        except WorkspaceError as exc:
+            if exc.code == "not_found":
+                raise HTTPException(
+                    status_code=404,
+                    detail={"code": exc.code, "message": exc.message},
+                ) from exc
+            raise _http_error(exc) from exc
+        return {"update": result}
+
     @application.post("/query")
     def query(body: QueryRequest) -> dict[str, Any]:
-        results = MOCK_RESULTS[: max(1, min(body.limit, len(MOCK_RESULTS)))]
-        return {
-            "query": body.query,
-            "mode": "hybrid_rag",
-            "count": len(results),
-            "results": results,
-        }
+        try:
+            return rag_service().query(
+                workspace_id=body.workspace_id,
+                query=body.query,
+                limit=body.limit,
+            )
+        except WorkspaceError as exc:
+            if exc.code == "not_found":
+                raise HTTPException(
+                    status_code=404,
+                    detail={"code": exc.code, "message": exc.message},
+                ) from exc
+            raise _http_error(exc) from exc
+
+    @application.post("/context/focus")
+    def context_focus(body: FocusRequest) -> dict[str, Any]:
+        try:
+            return rag_service().focus(
+                workspace_id=body.workspace_id,
+                path=body.path,
+                symbol=body.symbol,
+                line=body.line,
+                limit=body.limit,
+            )
+        except WorkspaceError as exc:
+            if exc.code == "not_found":
+                raise HTTPException(
+                    status_code=404,
+                    detail={"code": exc.code, "message": exc.message},
+                ) from exc
+            raise _http_error(exc) from exc
 
     return application
 

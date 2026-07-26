@@ -49,8 +49,8 @@ Endpoints: `GET /health`, `GET /workspaces`, `POST /query`.
 ## Implementation tracking
 
 - Sprint status: `_bmad-output/implementation-artifacts/sprint-status.yaml`
-- **Epic 1 (Local Core Skeleton): done** — Stories 1.1–1.3
-- **Epic 2:** in progress — 2.1 + 2.2 **done**; next 2.3 symbol parsing
+- **Epic 1:** done
+- **Epic 2:** **done** (2.1–2.5) — next Epic 3 / Story 3.1 embedding adapter
 
 ## VS Code extension
 

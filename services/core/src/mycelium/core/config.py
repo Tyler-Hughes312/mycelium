@@ -29,6 +29,11 @@ vault_dir = "vault"
 [index]
 # Max commits to ingest on initial index (FR-5).
 history_depth = 500
+
+[embedding]
+# Default is fully offline hashing (no download). Set to a sentence-transformers
+# model id (e.g. jinaai/jina-embeddings-v2-base-code) to use a cached HF model.
+model = "mycelium-hashing-v1"
 """
 
 
@@ -58,11 +63,17 @@ class IndexSettings:
 
 
 @dataclass(frozen=True)
+class EmbeddingSettings:
+    model: str
+
+
+@dataclass(frozen=True)
 class MyceliumConfig:
     paths: MyceliumPaths
     network: NetworkPolicy
     server: ServerBind
     index: IndexSettings
+    embedding: EmbeddingSettings
 
 
 def default_home() -> Path:
@@ -82,6 +93,7 @@ def ensure_local_layout(home: Path | None = None) -> MyceliumConfig:
     net_cfg = raw.get("network", {})
     srv_cfg = raw.get("server", {})
     index_cfg = raw.get("index", {})
+    emb_cfg = raw.get("embedding", {})
 
     def resolve(p: str, fallback: str) -> Path:
         candidate = Path(p or fallback)
@@ -95,6 +107,8 @@ def ensure_local_layout(home: Path | None = None) -> MyceliumConfig:
     depth = int(index_cfg.get("history_depth", 500))
     if depth < 1:
         depth = 500
+
+    model = str(emb_cfg.get("model", "mycelium-hashing-v1")).strip() or "mycelium-hashing-v1"
 
     return MyceliumConfig(
         paths=MyceliumPaths(
@@ -112,4 +126,5 @@ def ensure_local_layout(home: Path | None = None) -> MyceliumConfig:
             port=int(srv_cfg.get("port", 8787)),
         ),
         index=IndexSettings(history_depth=depth),
+        embedding=EmbeddingSettings(model=model),
     )

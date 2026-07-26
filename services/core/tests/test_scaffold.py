@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import subprocess
+import time
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -11,6 +12,7 @@ from mycelium import __version__
 from mycelium.adapters.http.app import create_app
 from mycelium.adapters.store import JsonFileWorkspaceRepo, WorkspaceError
 from mycelium.core.config import ensure_local_layout
+from mycelium.core.domain.index_service import IndexService
 from mycelium.core.ports import EmbeddingRuntime, GraphStore, WorkspaceRepo
 
 
@@ -102,7 +104,9 @@ def test_json_repo_rejects_missing_path(tmp_path: Path) -> None:
 
 
 def _commit_file(repo: Path, name: str, content: str, message: str) -> None:
-    (repo / name).write_text(content, encoding="utf-8")
+    target = repo / name
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(content, encoding="utf-8")
     subprocess.run(["git", "add", name], cwd=repo, check=True, capture_output=True)
     subprocess.run(
         [
@@ -121,21 +125,41 @@ def _commit_file(repo: Path, name: str, content: str, message: str) -> None:
     )
 
 
+def _wait_index(client: TestClient, workspace_id: str, timeout: float = 10.0) -> dict:
+    deadline = time.time() + timeout
+    last: dict = {}
+    while time.time() < deadline:
+        last = client.get(f"/workspaces/{workspace_id}/index/status").json()["status"]
+        if last.get("status") in {"complete", "failed", "cancelled"}:
+            return last
+        time.sleep(0.05)
+    raise AssertionError(f"index did not finish: {last}")
+
+
 def test_index_ingests_commit_nodes(tmp_path: Path) -> None:
     cfg = ensure_local_layout(tmp_path / "home")
     repo_dir = tmp_path / "indexed-repo"
     _init_git_repo(repo_dir)
     _commit_file(repo_dir, "readme.md", "hello\n", "Initial commit")
-    _commit_file(repo_dir, "app.py", "print('hi')\n", "Add app")
+    _commit_file(
+        repo_dir,
+        "app.py",
+        "def greet(name):\n    return f'hi {name}'\n\nclass Greeter:\n    pass\n",
+        "Add app",
+    )
 
     with TestClient(create_app(cfg)) as client:
         ws = client.post("/workspaces", json={"path": str(repo_dir)}).json()["workspace"]
-        indexed = client.post(f"/workspaces/{ws['id']}/index")
-        assert indexed.status_code == 200
-        body = indexed.json()["index"]
-        assert body["status"] == "complete"
-        assert body["commits_indexed"] == 2
-        assert body["commits_total"] == 2
+        started = client.post(f"/workspaces/{ws['id']}/index")
+        assert started.status_code == 200
+        assert started.json()["accepted"] is True
+        status = _wait_index(client, ws["id"])
+        assert status["status"] == "complete"
+        assert status["commits_indexed"] == 2
+        assert status["commits_total"] == 2
+        assert status["symbols_indexed"] >= 1
+        assert status["files_indexed"] >= 2
+        assert status.get("edges_indexed", 0) >= 1
 
         commits = client.get(f"/workspaces/{ws['id']}/commits").json()["commits"]
         assert len(commits) == 2
@@ -148,14 +172,224 @@ def test_index_ingests_commit_nodes(tmp_path: Path) -> None:
             assert isinstance(c["changed_paths"], list)
             assert c["changed_paths"]
 
-        status = client.get(f"/workspaces/{ws['id']}/index/status").json()["status"]
-        assert status["status"] == "complete"
-        assert status["progress"] == 100
+        symbols = client.get(f"/workspaces/{ws['id']}/symbols").json()["symbols"]
+        names = {s["name"] for s in symbols}
+        assert "greet" in names
+        for s in symbols:
+            assert s["kind"] == "Symbol"
+            assert s["path"]
+            assert s["start_line"] >= 1
+            assert s["end_line"] >= s["start_line"]
+
+        edges = client.get(f"/workspaces/{ws['id']}/edges").json()["edges"]
+        assert any(e["edge_kind"] == "co_changed" for e in edges)
+        assert any(
+            {e["source_name"], e["target_name"]} == {"greet", "Greeter"} for e in edges
+        )
 
         listed = client.get("/workspaces").json()["workspaces"][0]
         assert listed["commits"] == 2
+        assert listed["symbols"] >= 1
         assert listed["status"] == "healthy"
 
         # Re-index is idempotent (AD-7)
-        again = client.post(f"/workspaces/{ws['id']}/index").json()["index"]
+        client.post(f"/workspaces/{ws['id']}/index")
+        again = _wait_index(client, ws["id"])
         assert again["commits_total"] == 2
+        assert again["symbols_indexed"] == status["symbols_indexed"]
+        assert again["edges_indexed"] == status["edges_indexed"]
+
+
+def test_unsupported_file_still_gets_file_node(tmp_path: Path) -> None:
+    cfg = ensure_local_layout(tmp_path / "home")
+    repo_dir = tmp_path / "mixed-repo"
+    _init_git_repo(repo_dir)
+    _commit_file(repo_dir, "notes.txt", "plain text\n", "Add notes")
+    _commit_file(repo_dir, "util.py", "def helper():\n    return 1\n", "Add helper")
+
+    with TestClient(create_app(cfg)) as client:
+        ws = client.post("/workspaces", json={"path": str(repo_dir)}).json()["workspace"]
+        client.post(f"/workspaces/{ws['id']}/index")
+        status = _wait_index(client, ws["id"])
+        assert status["files_indexed"] >= 2
+        symbols = client.get(f"/workspaces/{ws['id']}/symbols").json()["symbols"]
+        assert any(s["name"] == "helper" for s in symbols)
+
+
+def test_cancel_index_sets_cancelled_status(tmp_path: Path) -> None:
+    cfg = ensure_local_layout(tmp_path / "home")
+    repo = JsonFileWorkspaceRepo(cfg.paths.data_dir)
+    # Use sync service path with pre-set cancel to verify AD-7 cancel path
+    svc = IndexService(
+        data_dir=cfg.paths.data_dir,
+        workspace_repo=repo,
+        history_depth=500,
+    )
+    repo_dir = tmp_path / "cancel-repo"
+    _init_git_repo(repo_dir)
+    _commit_file(repo_dir, "a.py", "def a():\n    return 1\n", "a")
+    ws = repo.register(str(repo_dir))
+
+    import threading
+
+    cancel = threading.Event()
+    cancel.set()
+    with svc._lock:
+        svc._cancel_events[ws["id"]] = cancel
+        svc._running.add(ws["id"])
+    try:
+        from mycelium.core.domain.index_service import IndexCancelled
+
+        try:
+            svc._run_index(ws["id"], cancel.is_set, "t0")
+            raise AssertionError("expected IndexCancelled")
+        except IndexCancelled:
+            pass
+    finally:
+        with svc._lock:
+            svc._running.discard(ws["id"])
+            svc._cancel_events.pop(ws["id"], None)
+
+
+def test_incremental_file_hook_upserts_stable_symbol_ids(tmp_path: Path) -> None:
+    cfg = ensure_local_layout(tmp_path / "home")
+    repo_dir = tmp_path / "inc-repo"
+    _init_git_repo(repo_dir)
+    _commit_file(repo_dir, "mod.py", "def alpha():\n    return 1\n", "add alpha")
+
+    with TestClient(create_app(cfg)) as client:
+        ws = client.post("/workspaces", json={"path": str(repo_dir)}).json()["workspace"]
+        client.post(f"/workspaces/{ws['id']}/index")
+        _wait_index(client, ws["id"])
+
+        first = client.post(
+            f"/workspaces/{ws['id']}/hooks/file-changed",
+            json={"path": "mod.py"},
+        )
+        assert first.status_code == 200
+        body = first.json()["update"]
+        assert body["symbols_upserted"] == 1
+        assert body["elapsed_ms"] < 500
+        ids_1 = body["symbol_ids"]
+        assert ids_1 == ["symbol:mod.py:alpha:1"]
+
+        # Modify file (same symbol line → stable id)
+        (repo_dir / "mod.py").write_text(
+            "def alpha():\n    return 2\n\ndef beta():\n    return 3\n",
+            encoding="utf-8",
+        )
+        second = client.post(
+            f"/workspaces/{ws['id']}/hooks/file-changed",
+            json={"path": str(repo_dir / "mod.py")},
+        ).json()["update"]
+        assert second["symbols_upserted"] == 2
+        assert "symbol:mod.py:alpha:1" in second["symbol_ids"]
+        assert "symbol:mod.py:beta:4" in second["symbol_ids"]
+        assert second["elapsed_ms"] < 500
+
+        symbols = client.get(f"/workspaces/{ws['id']}/symbols").json()["symbols"]
+        names = {s["name"] for s in symbols if s["path"] == "mod.py"}
+        assert names == {"alpha", "beta"}
+
+        # Delete file → symbols removed
+        (repo_dir / "mod.py").unlink()
+        deleted = client.post(
+            f"/workspaces/{ws['id']}/hooks/file-changed",
+            json={"path": "mod.py"},
+        ).json()["update"]
+        assert deleted["deleted"] is True
+        symbols_after = client.get(f"/workspaces/{ws['id']}/symbols").json()["symbols"]
+        assert not any(s["path"] == "mod.py" for s in symbols_after)
+
+
+def test_embeddings_status_offline_hashing(tmp_path: Path) -> None:
+    cfg = ensure_local_layout(tmp_path / "home")
+    with TestClient(create_app(cfg)) as client:
+        res = client.get("/embeddings/status")
+        assert res.status_code == 200
+        body = res.json()
+        assert body["offline"] is True
+        assert body["backend"] == "hashing"
+        assert "notice" in body
+        health = client.get("/health").json()
+        assert health["embedding"]["backend"] == "hashing"
+
+
+def test_hybrid_query_and_focus_after_index(tmp_path: Path) -> None:
+    cfg = ensure_local_layout(tmp_path / "home")
+    repo_dir = tmp_path / "rag-repo"
+    _init_git_repo(repo_dir)
+    _commit_file(
+        repo_dir,
+        "app.py",
+        "def greet(name):\n    return f'hi {name}'\n\ndef farewell(name):\n    return f'bye {name}'\n",
+        "Add greet helpers",
+    )
+
+    with TestClient(create_app(cfg)) as client:
+        ws = client.post("/workspaces", json={"path": str(repo_dir)}).json()["workspace"]
+        client.post(f"/workspaces/{ws['id']}/index")
+        status = _wait_index(client, ws["id"])
+        assert status["status"] == "complete"
+        assert status.get("vectors_indexed", 0) >= 1
+
+        empty = client.post(
+            "/query",
+            json={"query": "greet", "workspace_id": "missing", "limit": 5},
+        )
+        assert empty.status_code == 404
+
+        q = client.post(
+            "/query",
+            json={"query": "greet helpers", "workspace_id": ws["id"], "limit": 5},
+        )
+        assert q.status_code == 200
+        body = q.json()
+        assert body["mode"] == "hybrid_rag"
+        assert body["count"] <= 10
+        assert body["count"] >= 1
+        kinds = {r["kind"] for r in body["results"]}
+        assert kinds & {"Symbol", "Commit"}
+        for r in body["results"]:
+            assert "provenance" in r
+            assert r["provenance"]["fusion"] == "rrf"
+
+        # Re-embed skips unchanged
+        again = client.post(f"/workspaces/{ws['id']}/embeddings")
+        assert again.status_code == 200
+        emb = again.json()["embedding"]
+        assert emb["skipped_unchanged"] >= 1
+
+        focus = client.post(
+            "/context/focus",
+            json={
+                "workspace_id": ws["id"],
+                "path": "app.py",
+                "symbol": "greet",
+                "limit": 5,
+            },
+        )
+        assert focus.status_code == 200
+        pkt = focus.json()
+        assert pkt["mode"] == "focus"
+        assert pkt["count"] >= 1
+        assert pkt["seed_id"]
+        assert any(r.get("provenance", {}).get("seed") for r in pkt["results"])
+
+
+def test_focus_empty_index_reason(tmp_path: Path) -> None:
+    cfg = ensure_local_layout(tmp_path / "home")
+    repo_dir = tmp_path / "empty-rag"
+    _init_git_repo(repo_dir)
+    _commit_file(repo_dir, "readme.md", "x\n", "init")
+
+    with TestClient(create_app(cfg)) as client:
+        ws = client.post("/workspaces", json={"path": str(repo_dir)}).json()["workspace"]
+        focus = client.post(
+            "/context/focus",
+            json={"workspace_id": ws["id"], "path": "readme.md"},
+        )
+        assert focus.status_code == 200
+        body = focus.json()
+        assert body["count"] == 0
+        assert body["reason"] == "empty_index"

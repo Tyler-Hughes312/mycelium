@@ -1,13 +1,19 @@
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 import {
   ApiError,
+  cancelIndex,
   getIndexStatus,
   listCommits,
+  listEdges,
+  listSymbols,
   listWorkspaces,
   registerWorkspace,
   startIndex,
+  waitForIndex,
   type CommitNode,
+  type EdgeNode,
   type IndexStatus,
+  type SymbolNode,
   type Workspace,
 } from "../api/client";
 
@@ -26,6 +32,8 @@ export function IndexPage() {
   const [pathDraft, setPathDraft] = useState("");
   const [status, setStatus] = useState<IndexStatus | null>(null);
   const [commits, setCommits] = useState<CommitNode[]>([]);
+  const [symbols, setSymbols] = useState<SymbolNode[]>([]);
+  const [edges, setEdges] = useState<EdgeNode[]>([]);
   const [logs, setLogs] = useState<{ time: string; text: string; tone?: "ok" | "err" }[]>(
     [],
   );
@@ -51,17 +59,18 @@ export function IndexPage() {
     return rows;
   }, []);
 
-  const refreshSelected = useCallback(
-    async (id: string) => {
-      const [st, rows] = await Promise.all([
-        getIndexStatus(id),
-        listCommits(id, 30),
-      ]);
-      setStatus(st);
-      setCommits(rows);
-    },
-    [],
-  );
+  const refreshSelected = useCallback(async (id: string) => {
+    const [st, rows, syms, eds] = await Promise.all([
+      getIndexStatus(id),
+      listCommits(id, 30),
+      listSymbols(id, 40),
+      listEdges(id, 40),
+    ]);
+    setStatus(st);
+    setCommits(rows);
+    setSymbols(syms);
+    setEdges(eds);
+  }, []);
 
   useEffect(() => {
     void refreshWorkspaces().catch((err: unknown) => {
@@ -73,11 +82,14 @@ export function IndexPage() {
     if (!selectedId) {
       setStatus(null);
       setCommits([]);
+      setSymbols([]);
+      setEdges([]);
       return;
     }
     void refreshSelected(selectedId).catch(() => {
-      /* empty until first index */
       setCommits([]);
+      setSymbols([]);
+      setEdges([]);
     });
   }, [selectedId, refreshSelected]);
 
@@ -106,8 +118,18 @@ export function IndexPage() {
     setError(null);
     pushLog(`Starting index job for ${id}…`);
     try {
-      const result = await startIndex(id);
-      pushLog(result.message, "ok");
+      await startIndex(id);
+      const result = await waitForIndex(id, (st) => {
+        setStatus(st);
+      });
+      if (result.status === "complete") {
+        pushLog(result.message ?? "Index complete", "ok");
+      } else if (result.status === "cancelled") {
+        pushLog(result.message ?? "Index cancelled", "err");
+      } else {
+        pushLog(result.message ?? "Index failed", "err");
+        setError(result.message ?? "Index failed");
+      }
       await refreshWorkspaces();
       await refreshSelected(id);
     } catch (err: unknown) {
@@ -126,6 +148,17 @@ export function IndexPage() {
     }
   }
 
+  async function onCancel(id: string) {
+    try {
+      const st = await cancelIndex(id);
+      setStatus(st);
+      pushLog("Cancel requested…");
+    } catch (err: unknown) {
+      const msg = err instanceof ApiError ? err.message : "Cancel failed";
+      setError(msg);
+    }
+  }
+
   async function onRefreshAll() {
     setBusy(true);
     setError(null);
@@ -135,6 +168,7 @@ export function IndexPage() {
         if (!ws.id) continue;
         pushLog(`Indexing ${ws.name}…`);
         await startIndex(ws.id);
+        await waitForIndex(ws.id, setStatus);
       }
       pushLog("Refresh all complete", "ok");
       if (selectedId) await refreshSelected(selectedId);
@@ -270,17 +304,33 @@ export function IndexPage() {
                   {selected?.path ?? "Select a workspace"}
                 </p>
               </div>
-              <button
-                type="button"
-                disabled={!selectedId || busy}
-                onClick={() => selectedId && void onIndex(selectedId)}
-                className="text-primary border border-border hover:border-primary bg-surface-container-lowest px-sm py-xs rounded-lg font-label-caps text-label-caps transition-colors flex items-center disabled:opacity-50"
-              >
-                <span className="material-symbols-outlined mr-xs text-[14px]">
-                  play_arrow
-                </span>
-                Run Index
-              </button>
+              <div className="flex gap-sm">
+                {(status?.status === "indexing" ||
+                  status?.status === "cancelling") &&
+                  selectedId && (
+                    <button
+                      type="button"
+                      onClick={() => void onCancel(selectedId)}
+                      className="text-muted hover:text-danger border border-border hover:border-danger bg-surface-container-lowest px-sm py-xs rounded-lg font-label-caps text-label-caps transition-colors flex items-center"
+                    >
+                      <span className="material-symbols-outlined mr-xs text-[14px]">
+                        cancel
+                      </span>
+                      Cancel
+                    </button>
+                  )}
+                <button
+                  type="button"
+                  disabled={!selectedId || busy}
+                  onClick={() => selectedId && void onIndex(selectedId)}
+                  className="text-primary border border-border hover:border-primary bg-surface-container-lowest px-sm py-xs rounded-lg font-label-caps text-label-caps transition-colors flex items-center disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined mr-xs text-[14px]">
+                    play_arrow
+                  </span>
+                  Run Index
+                </button>
+              </div>
             </div>
             <div className="space-y-sm">
               <div className="flex justify-between font-technical-mono-sm text-technical-mono-sm">
@@ -310,6 +360,40 @@ export function IndexPage() {
                 </span>
                 {selected?.symbols ?? 0} symbols
               </div>
+              <div className="w-px h-4 bg-border" />
+              <div className="flex items-center text-on-surface">
+                <span className="material-symbols-outlined text-[14px] mr-xs text-muted">
+                  hub
+                </span>
+                {edges.length} edges
+              </div>
+            </div>
+          </section>
+
+          <section className="bg-surface-container-low border border-border rounded-lg flex flex-col flex-1 min-h-[160px] overflow-hidden">
+            <div className="p-sm border-b border-border flex items-center justify-between">
+              <h3 className="font-label-md text-label-md text-on-surface-variant flex items-center">
+                <span className="material-symbols-outlined mr-xs text-[16px]">
+                  data_object
+                </span>
+                Symbol Nodes
+              </h3>
+            </div>
+            <div className="p-md font-technical-mono-sm text-technical-mono-sm bg-surface-container-lowest flex-1 overflow-y-auto space-y-xs max-h-48">
+              {symbols.length === 0 && (
+                <p className="text-muted">No symbols indexed yet.</p>
+              )}
+              {symbols.map((s) => (
+                <div key={s.id} className="border-b border-border/50 pb-xs">
+                  <div className="text-on-surface truncate">
+                    <span className="text-primary">{s.name}</span>{" "}
+                    <span className="text-muted">({s.symbol_kind})</span>
+                  </div>
+                  <div className="text-muted">
+                    {s.path}:{s.start_line}-{s.end_line} · {s.language}
+                  </div>
+                </div>
+              ))}
             </div>
           </section>
 
@@ -335,6 +419,34 @@ export function IndexPage() {
                   <div className="text-muted">
                     {c.author} · {formatTime(c.timestamp)} ·{" "}
                     {c.changed_paths.length} files
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="bg-surface-container-low border border-border rounded-lg flex flex-col flex-1 min-h-[140px] overflow-hidden">
+            <div className="p-sm border-b border-border flex items-center justify-between">
+              <h3 className="font-label-md text-label-md text-on-surface-variant flex items-center">
+                <span className="material-symbols-outlined mr-xs text-[16px]">
+                  hub
+                </span>
+                Co-change Edges
+              </h3>
+            </div>
+            <div className="p-md font-technical-mono-sm text-technical-mono-sm bg-surface-container-lowest flex-1 overflow-y-auto space-y-xs max-h-40">
+              {edges.length === 0 && (
+                <p className="text-muted">No co-change edges yet.</p>
+              )}
+              {edges.map((e) => (
+                <div key={e.id} className="border-b border-border/50 pb-xs">
+                  <div className="text-on-surface truncate">
+                    <span className="text-primary">{e.source_name}</span>
+                    <span className="text-muted"> ↔ </span>
+                    <span className="text-primary">{e.target_name}</span>
+                  </div>
+                  <div className="text-muted truncate">
+                    {e.source_path} · {e.target_path}
                   </div>
                 </div>
               ))}

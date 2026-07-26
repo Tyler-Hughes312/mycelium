@@ -1,6 +1,11 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { ProvenanceChip, type ProvenanceKind } from "@mycelium/ui";
-import { runQuery, type QueryResult } from "../api/client";
+import {
+  listWorkspaces,
+  runQuery,
+  type QueryResult,
+  type Workspace,
+} from "../api/client";
 
 const KIND_ICON: Record<ProvenanceKind, string> = {
   Symbol: "description",
@@ -15,23 +20,45 @@ function resultMeta(r: QueryResult) {
 }
 
 export function SearchPage() {
-  const [query, setQuery] = useState("how did we handle rate limits");
+  const [query, setQuery] = useState("greet");
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [workspaceId, setWorkspaceId] = useState<string>("");
   const [results, setResults] = useState<QueryResult[]>([]);
   const [mode, setMode] = useState("hybrid_rag");
   const [selected, setSelected] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hint, setHint] = useState<string | null>(null);
 
-  async function search(q: string) {
+  useEffect(() => {
+    void listWorkspaces()
+      .then((rows) => {
+        setWorkspaces(rows);
+        const first = rows.find((w) => w.id)?.id ?? "";
+        setWorkspaceId(first);
+      })
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : "Failed to load workspaces");
+      });
+  }, []);
+
+  async function search(q: string, wsId: string) {
     const trimmed = q.trim();
-    if (!trimmed) return;
+    if (!trimmed || !wsId) return;
     setLoading(true);
     setError(null);
+    setHint(null);
     try {
-      const data = await runQuery(trimmed, 8);
+      const data = await runQuery(trimmed, wsId, 8);
       setResults(data.results);
       setMode(data.mode);
       setSelected(0);
+      if ("reason" in data && data.reason === "empty_index") {
+        setHint(
+          (data as { message?: string }).message ??
+            "No embeddings yet — index a workspace first.",
+        );
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Query failed");
       setResults([]);
@@ -41,20 +68,36 @@ export function SearchPage() {
   }
 
   useEffect(() => {
-    void search(query);
-    // Initial load against Core mock RAG only.
+    if (workspaceId) void search(query, workspaceId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [workspaceId]);
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
-    void search(query);
+    void search(query, workspaceId);
   }
 
   return (
     <main className="h-full overflow-y-auto px-8 py-8 flex justify-center bg-surface">
       <div className="w-full max-w-4xl flex flex-col gap-6">
         <form className="flex flex-col gap-2" onSubmit={onSubmit}>
+          <div className="flex gap-2">
+            <select
+              className="bg-surface-container border border-border rounded-lg px-3 py-2 font-technical-mono-sm text-technical-mono-sm text-on-surface min-w-[12rem]"
+              value={workspaceId}
+              onChange={(e) => setWorkspaceId(e.target.value)}
+              aria-label="Workspace"
+            >
+              {workspaces.length === 0 && (
+                <option value="">No workspaces</option>
+              )}
+              {workspaces.map((w) => (
+                <option key={w.id ?? w.path} value={w.id ?? ""}>
+                  {w.name}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="relative w-full">
             <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-muted text-[24px]">
               search
@@ -92,6 +135,9 @@ export function SearchPage() {
               Core unreachable: {error}
             </p>
           )}
+          {hint && !error && (
+            <p className="font-body-sm text-body-sm text-muted px-1">{hint}</p>
+          )}
         </form>
 
         <div className="flex flex-col gap-2 pb-12">
@@ -101,7 +147,7 @@ export function SearchPage() {
             return (
               <button
                 type="button"
-                key={`${r.kind}-${r.title}-${r.path}`}
+                key={`${r.kind}-${r.title}-${r.path}-${i}`}
                 onClick={() => setSelected(i)}
                 className={
                   isSelected
