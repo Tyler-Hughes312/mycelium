@@ -1,10 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ApiError,
+  getGitHubStatus,
+  importGitHubRepo,
+  listGitHubRepos,
   listWorkspaces,
   registerWorkspace,
+  type GitHubRepo,
+  type GitHubStatus,
   type Workspace,
 } from "../api/client";
+import { isTauriShell, pickDirectory } from "../lib/fs";
 
 function statusAccent(status: Workspace["status"]) {
   if (status === "healthy") return "bg-primary";
@@ -49,6 +55,12 @@ export function LibraryPage() {
   const [adding, setAdding] = useState(false);
   const [pathDraft, setPathDraft] = useState("");
   const [registering, setRegistering] = useState(false);
+  const [ghOpen, setGhOpen] = useState(false);
+  const [ghStatus, setGhStatus] = useState<GitHubStatus | null>(null);
+  const [ghRepos, setGhRepos] = useState<GitHubRepo[]>([]);
+  const [ghLoading, setGhLoading] = useState(false);
+  const [importing, setImporting] = useState<string | null>(null);
+  const [hint, setHint] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -65,6 +77,9 @@ export function LibraryPage() {
 
   useEffect(() => {
     void refresh();
+    void getGitHubStatus()
+      .then(setGhStatus)
+      .catch(() => setGhStatus(null));
   }, [refresh]);
 
   const visible = useMemo(() => {
@@ -97,39 +112,189 @@ export function LibraryPage() {
     }
   }
 
+  async function onAddWorkspaceClick() {
+    if (isTauriShell()) {
+      setError(null);
+      const path = await pickDirectory("Choose a git repository folder");
+      if (!path) return;
+      setPathDraft(path);
+      setRegistering(true);
+      try {
+        await registerWorkspace(path);
+        setPathDraft("");
+        setAdding(false);
+        setHint(`Added workspace: ${path}`);
+        await refresh();
+      } catch (err: unknown) {
+        setAdding(true);
+        if (err instanceof ApiError) {
+          setError(err.message);
+        } else {
+          setError(err instanceof Error ? err.message : "Register failed");
+        }
+      } finally {
+        setRegistering(false);
+      }
+      return;
+    }
+    setAdding((v) => !v);
+  }
+
+  async function onBrowseFolder() {
+    const path = await pickDirectory("Choose a git repository folder");
+    if (path) setPathDraft(path);
+  }
+
+  async function openGitHubImport() {
+    setGhOpen(true);
+    setGhLoading(true);
+    setError(null);
+    try {
+      const status = await getGitHubStatus();
+      setGhStatus(status);
+      if (!status.connected) {
+        setError("Connect GitHub in Settings first (PAT or device OAuth).");
+        setGhRepos([]);
+        return;
+      }
+      const data = await listGitHubRepos(1, 40);
+      setGhRepos(data.repos);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to list GitHub repos");
+    } finally {
+      setGhLoading(false);
+    }
+  }
+
+  async function onImport(repo: GitHubRepo) {
+    setImporting(repo.full_name);
+    setError(null);
+    try {
+      await importGitHubRepo({
+        clone_url: repo.clone_url,
+        full_name: repo.full_name,
+      });
+      await refresh();
+      setMessageQuiet(`${repo.full_name} imported — Index it next`);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Import failed");
+    } finally {
+      setImporting(null);
+    }
+  }
+
+  function setMessageQuiet(msg: string) {
+    setHint(msg);
+  }
+
   return (
     <main className="w-full h-full overflow-y-auto bg-surface-dim p-xl">
       <div className="max-w-5xl mx-auto flex flex-col gap-xl">
-        <div className="flex items-end justify-between border-b border-border pb-md">
+        <div className="flex items-end justify-between border-b border-border pb-md gap-md flex-wrap">
           <h2 className="font-headline-lg text-headline-lg font-medium text-on-surface">
             Library
           </h2>
-          <button
-            type="button"
-            onClick={() => setAdding((v) => !v)}
-            className="flex items-center gap-xs px-md py-sm bg-surface-container-low border border-border rounded-lg text-on-surface hover:bg-surface-container-high transition-colors duration-150 font-body-sm text-body-sm"
-          >
-            <span className="material-symbols-outlined text-[16px]">
-              add_box
-            </span>
-            Add workspace
-          </button>
+          <div className="flex gap-sm">
+            <button
+              type="button"
+              onClick={() => void openGitHubImport()}
+              className="flex items-center gap-xs px-md py-sm bg-primary text-on-primary rounded-xl hover:brightness-110 transition-colors duration-150 font-body-sm text-body-sm"
+            >
+              <span className="material-symbols-outlined text-[16px]">cloud_download</span>
+              Import from GitHub
+            </button>
+            <button
+              type="button"
+              onClick={() => void onAddWorkspaceClick()}
+              disabled={registering}
+              className="flex items-center gap-xs px-md py-sm bg-surface-container-low border border-border rounded-lg text-on-surface hover:bg-surface-container-high transition-colors duration-150 font-body-sm text-body-sm disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-[16px]">add_box</span>
+              {registering ? "Adding…" : "Add workspace"}
+            </button>
+          </div>
         </div>
+
+        {hint && (
+          <p className="font-body-sm text-body-sm text-primary">{hint}</p>
+        )}
+
+        {ghOpen && (
+          <div className="flex flex-col gap-sm p-md bg-surface-container-lowest border border-border rounded-lg max-h-[360px]">
+            <div className="flex items-center justify-between">
+              <h3 className="font-label-md text-label-md text-on-surface">
+                GitHub repos
+                {ghStatus?.login ? ` · @${ghStatus.login}` : ""}
+              </h3>
+              <button
+                type="button"
+                className="text-muted font-body-sm text-body-sm"
+                onClick={() => setGhOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+            {ghLoading && (
+              <p className="font-technical-mono text-technical-mono text-muted">
+                Loading…
+              </p>
+            )}
+            <div className="overflow-y-auto flex flex-col gap-xs">
+              {ghRepos.map((repo) => (
+                <div
+                  key={repo.id}
+                  className="flex items-center justify-between gap-md py-sm px-sm rounded-lg hover:bg-surface-container-low"
+                >
+                  <div className="min-w-0">
+                    <p className="font-body-md text-body-md text-on-surface truncate">
+                      {repo.full_name}
+                      {repo.private ? (
+                        <span className="ml-sm text-muted font-technical-mono-sm text-technical-mono-sm">
+                          private
+                        </span>
+                      ) : null}
+                    </p>
+                    <p className="font-technical-mono-sm text-technical-mono-sm text-muted truncate">
+                      {repo.description || repo.clone_url}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={importing === repo.full_name}
+                    onClick={() => void onImport(repo)}
+                    className="shrink-0 px-md h-9 rounded-lg bg-primary text-on-primary font-label-md text-label-md disabled:opacity-50"
+                  >
+                    {importing === repo.full_name ? "Importing…" : "Import"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {adding && (
           <div className="flex flex-col gap-sm p-md bg-surface-container-lowest border border-border rounded-lg">
             <label className="font-body-sm text-body-sm text-muted">
-              Local git repository path
+              Local git repository
             </label>
-            <div className="flex gap-sm">
+            <div className="flex gap-sm flex-wrap">
+              <button
+                type="button"
+                onClick={() => void onBrowseFolder()}
+                className="flex items-center gap-xs px-md py-sm bg-surface-container border border-border rounded-lg text-on-surface hover:bg-surface-container-high font-body-sm text-body-sm"
+              >
+                <span className="material-symbols-outlined text-[16px]">folder_open</span>
+                Choose folder…
+              </button>
               <input
-                className="flex-1 bg-surface-container border border-border rounded-lg px-md py-sm text-on-surface font-technical-mono text-technical-mono focus:outline-none focus:border-primary placeholder:text-muted"
-                placeholder="/Users/you/project or ~/dev/my-repo"
+                className="flex-1 min-w-[200px] bg-surface-container border border-border rounded-lg px-md py-sm text-on-surface font-technical-mono text-technical-mono focus:outline-none focus:border-primary placeholder:text-muted"
+                placeholder="Selected path appears here"
                 value={pathDraft}
                 onChange={(e) => setPathDraft(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") void onRegister();
                 }}
+                readOnly={isTauriShell()}
               />
               <button
                 type="button"
@@ -140,6 +305,11 @@ export function LibraryPage() {
                 {registering ? "Adding…" : "Register"}
               </button>
             </div>
+            {!isTauriShell() && (
+              <p className="font-technical-mono-sm text-technical-mono-sm text-muted">
+                Folder picker is available in the desktop app. In the browser, paste an absolute path.
+              </p>
+            )}
           </div>
         )}
 
@@ -148,15 +318,12 @@ export function LibraryPage() {
             search
           </span>
           <input
-            className="w-full bg-surface-container border border-border rounded-lg pl-xl pr-md py-md text-on-surface font-body-md text-body-md focus:outline-none focus:border-primary transition-colors duration-150 placeholder:text-muted"
+            className="w-full bg-surface-container border border-border rounded-lg pl-10 pr-md py-md text-on-surface font-body-md text-body-md focus:outline-none focus:border-primary transition-colors duration-150 placeholder:text-muted"
             placeholder="Search your graph..."
             type="text"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
           />
-          <div className="absolute right-md top-1/2 -translate-y-1/2 flex items-center gap-xs px-xs py-[2px] bg-surface-container-high border border-border rounded-lg text-muted font-technical-mono-sm text-technical-mono-sm">
-            <span>⌘K</span>
-          </div>
         </div>
 
         {loading && (
@@ -169,7 +336,7 @@ export function LibraryPage() {
         )}
         {!loading && !error && workspaces.length === 0 && (
           <p className="font-body-sm text-body-sm text-muted">
-            No workspaces yet. Add a local git repo path to get started.
+            No workspaces yet. Add a local path or Import from GitHub.
           </p>
         )}
 

@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
 from mycelium.adapters.parse.symbols import SymbolRecord
+from mycelium.adapters.store.json_io import atomic_write_json, read_json_object
 
 
 class JsonSymbolStore:
@@ -21,11 +21,11 @@ class JsonSymbolStore:
             self._write(self._symbols_path, {})
 
     def _read(self, path: Path) -> dict[str, dict[str, Any]]:
-        raw = json.loads(path.read_text(encoding="utf-8"))
+        raw = read_json_object(path, default={})
         return raw if isinstance(raw, dict) else {}
 
     def _write(self, path: Path, data: dict[str, dict[str, Any]]) -> None:
-        path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        atomic_write_json(path, data)
 
     def replace_snapshot(
         self,

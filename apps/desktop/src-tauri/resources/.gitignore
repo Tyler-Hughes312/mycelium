@@ -1,0 +1,4 @@
+# Built by scripts/build-core-sidecar.sh — not committed.
+*
+!.gitignore
+!README.md

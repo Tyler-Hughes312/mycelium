@@ -69,34 +69,40 @@ development_status:
   3-4-focus-context-packet-api: done
   epic-3-retrospective: optional
 
-  epic-4: backlog
-  4-1-vault-path-note-file-crud-api: backlog
-  4-2-wikilink-parse-backlinks: backlog
-  4-3-embed-notes-into-rag: backlog
+  epic-4: done
+  4-1-vault-path-note-file-crud-api: done
+  4-2-wikilink-parse-backlinks: done
+  4-3-embed-notes-into-rag: done
   epic-4-retrospective: optional
 
-  epic-5: backlog
-  5-1-tauri-shell-core-lifecycle: backlog
-  5-2-shared-mycelium-ui-package: backlog
-  5-3-workspace-index-console: backlog
-  5-4-desktop-rag-search: backlog
-  5-5-desktop-vault-editor: backlog
-  5-6-settings-privacy-panel: backlog
+  epic-5: done
+  5-1-tauri-shell-core-lifecycle: done
+  5-2-shared-mycelium-ui-package: done
+  5-3-workspace-index-console: done
+  5-4-desktop-rag-search: done
+  5-5-desktop-vault-editor: done
+  5-6-settings-privacy-panel: done
   epic-5-retrospective: optional
 
-  epic-6: backlog
-  6-1-extension-skeleton-core-connection-status: backlog
-  6-2-side-panel-context-packet-view: backlog
-  6-3-create-note-from-current-symbol: backlog
+  epic-6: done
+  6-1-extension-skeleton-core-connection-status: done
+  6-2-side-panel-context-packet-view: done
+  6-3-create-note-from-current-symbol: done
   epic-6-retrospective: optional
 
-  epic-7: backlog
-  7-1-mcp-server-process-wired-to-core: backlog
-  7-2-recall-tools-search-focus-note-commits: backlog
+  epic-7: done
+  7-1-mcp-server-process-wired-to-core: done
+  7-2-recall-tools-search-focus-note-commits: done
   epic-7-retrospective: optional
 
-  epic-8: backlog
-  8-1-one-command-local-install-readme: backlog
-  8-2-embedding-model-eval-harness: backlog
-  8-3-demo-script-dogfood-checklist: backlog
+  epic-8: done
+  8-1-one-command-local-install-readme: done
+  8-2-embedding-model-eval-harness: done
+  8-3-demo-script-dogfood-checklist: done
   epic-8-retrospective: optional
+
+  epic-9: done
+  9-1-vault-buckets-dual-path: done
+  9-2-agent-second-brain-write: done
+  9-3-obsidian-vault-scaffold: done
+  epic-9-retrospective: optional

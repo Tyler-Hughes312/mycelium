@@ -26,7 +26,7 @@ export function SiteNav() {
         </a>
         <ul className="flex flex-wrap items-center justify-end gap-x-5 gap-y-2 text-sm font-medium text-[var(--color-muted)]">
           {NAV_LINKS.map((link) => (
-            <li key={link.href}>
+            <li key={`${link.href}-${link.label}`}>
               <a href={link.href} className={linkClass}>
                 {link.label}
               </a>
@@ -34,7 +34,7 @@ export function SiteNav() {
           ))}
           <li>
             <a
-              href={LINKS.releases}
+              href={LINKS.desktopDownload}
               target="_blank"
               rel="noreferrer"
               className={linkClass}

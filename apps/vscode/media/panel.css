@@ -1,15 +1,15 @@
 :root {
-  --surface: #111417;
-  --surface-low: #191c1f;
-  --surface-container: #1d2023;
-  --surface-lowest: #0b0e11;
-  --surface-variant: #323538;
-  --border: #2a333b;
-  --foreground: #e7ecef;
-  --on-surface: #e1e2e7;
-  --muted: #8b979f;
-  --primary: #6ec8ff;
-  --secondary: #e5c276;
+  --surface: #1c1f22;
+  --surface-low: #262a2e;
+  --surface-container: #2a2e32;
+  --surface-lowest: #14171a;
+  --surface-variant: #3a3f44;
+  --border: #4a5056;
+  --foreground: #f2f4f5;
+  --on-surface: #f2f4f5;
+  --muted: #9aa3aa;
+  --primary: #00d1b2;
+  --secondary: #c5ccd1;
   --font-sans: "IBM Plex Sans", sans-serif;
   --font-mono: "IBM Plex Mono", monospace;
 }
@@ -239,4 +239,54 @@ body {
 
 .icon-md {
   font-size: 18px;
+}
+
+.dot.off {
+  background: var(--muted);
+  box-shadow: none;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.ghost:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.error {
+  margin: 8px 16px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, #c45c5c 50%, var(--border));
+  background: color-mix(in srgb, #c45c5c 12%, transparent);
+  color: #e8b4b4;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.hidden {
+  display: none;
+}
+
+.empty {
+  padding: 16px 8px 16px 24px;
+}
+
+.card {
+  cursor: pointer;
 }

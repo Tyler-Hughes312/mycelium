@@ -5,7 +5,7 @@ const WASH_INK: Record<Capability["wash"], string> = {
   sage: "text-[#0f1113]",
   violet: "text-[var(--color-fg)]",
   teal: "text-[#0f1113]",
-  slate: "text-[var(--color-fg)]",
+  amber: "text-[#0f1113]",
 };
 
 export function Capabilities() {
@@ -26,15 +26,9 @@ export function Capabilities() {
           >
             <div className="flex items-baseline justify-between gap-4">
               <p className="font-display text-sm font-medium uppercase tracking-[0.2em] opacity-70">
-                {String(index + 1).padStart(2, "0")} / {String(CAPABILITIES.length).padStart(2, "0")}
+                {String(index + 1).padStart(2, "0")} /{" "}
+                {String(CAPABILITIES.length).padStart(2, "0")}
               </p>
-              {index === 0 ? (
-                <img
-                  src="/stitch/capabilities.png"
-                  alt=""
-                  className="hidden h-16 w-auto rounded-md opacity-90 sm:block"
-                />
-              ) : null}
             </div>
             <div className="max-w-2xl">
               <h2 className="font-display text-5xl font-semibold tracking-tight sm:text-7xl">

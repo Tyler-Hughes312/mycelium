@@ -5,7 +5,7 @@ export function Setup() {
     <section
       id="setup"
       data-chapter="setup"
-      className="relative flex min-h-screen flex-col justify-center bg-[var(--color-bg)] px-6 py-28"
+      className="relative flex min-h-screen flex-col justify-center px-6 py-28"
     >
       <div className="mx-auto w-full max-w-4xl">
         <p className="font-display text-sm font-medium uppercase tracking-[0.2em] text-[var(--color-teal)]">
@@ -39,7 +39,7 @@ export function Setup() {
         </ol>
         <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
           <a
-            href={LINKS.releases}
+            href={LINKS.desktopDownload}
             target="_blank"
             rel="noreferrer"
             className="btn-primary"

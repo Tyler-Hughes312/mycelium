@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
 from mycelium.adapters.git.history import CommitRecord
+from mycelium.adapters.store.json_io import atomic_write_json, read_json_object
 
 
 class JsonCommitStore:
@@ -20,14 +20,11 @@ class JsonCommitStore:
             self._write({})
 
     def _read(self) -> dict[str, dict[str, Any]]:
-        raw = json.loads(self._path.read_text(encoding="utf-8"))
+        raw = read_json_object(self._path, default={})
         return raw if isinstance(raw, dict) else {}
 
     def _write(self, data: dict[str, dict[str, Any]]) -> None:
-        self._path.write_text(
-            json.dumps(data, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
+        atomic_write_json(self._path, data)
 
     def upsert_commits(self, commits: list[CommitRecord]) -> int:
         """Upsert commits by hash; return total stored count."""

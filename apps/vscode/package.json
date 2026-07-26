@@ -2,15 +2,39 @@
   "name": "mycelium",
   "displayName": "Mycelium",
   "description": "Local-first context layer side panel for AI-heavy developers",
-  "version": "0.0.1",
-  "publisher": "mycelium",
+  "version": "0.1.0",
+  "publisher": "mycelium-local",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mycelium-dev/mycelium.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mycelium-dev/mycelium/issues"
+  },
+  "homepage": "https://github.com/mycelium-dev/mycelium#readme",
   "engines": {
     "vscode": "^1.85.0"
   },
   "categories": ["Other"],
-  "activationEvents": ["onView:mycelium.sidePanel"],
+  "keywords": ["mycelium", "rag", "context", "local-first", "vault"],
+  "icon": "media/icon.png",
+  "activationEvents": [
+    "onStartupFinished",
+    "onView:mycelium.sidePanel"
+  ],
   "main": "./out/extension.js",
   "contributes": {
+    "configuration": {
+      "title": "Mycelium",
+      "properties": {
+        "mycelium.coreUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:8787",
+          "description": "Mycelium Core HTTP base URL (localhost only by default)."
+        }
+      }
+    },
     "viewsContainers": {
       "activitybar": [
         {
@@ -33,17 +57,31 @@
       {
         "command": "mycelium.openPanel",
         "title": "Mycelium: Open Panel"
+      },
+      {
+        "command": "mycelium.retryConnection",
+        "title": "Mycelium: Retry Connection"
+      },
+      {
+        "command": "mycelium.refreshContext",
+        "title": "Mycelium: Refresh Context"
+      },
+      {
+        "command": "mycelium.newNote",
+        "title": "Mycelium: New Note"
       }
     ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./"
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package --no-dependencies"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.2.2",
     "typescript": "^5.3.3"
   }
 }

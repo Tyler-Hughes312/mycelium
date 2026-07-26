@@ -305,6 +305,9 @@ def create_app(config: MyceliumConfig | None = None) -> FastAPI:
                 **(status_dict(emb) if emb is not None else {}),
             }
             payload["api_token_enabled"] = bool(cfg.server.api_token)
+        watchers_state = getattr(application.state, "watchers", None)
+        if watchers_state is not None and hasattr(watchers_state, "status"):
+            payload["watchers"] = watchers_state.status()
         return payload
 
     @application.get("/embeddings/status")

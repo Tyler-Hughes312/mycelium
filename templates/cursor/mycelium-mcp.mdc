@@ -1,0 +1,39 @@
+---
+description: Proactively use Mycelium MCP as a local second brain (read + write)
+alwaysApply: true
+---
+
+# Mycelium second brain (shipped agent guidance)
+
+Mycelium MCP talks to local Core (`http://127.0.0.1:8787`). **Call these tools when helpful — do not wait to be asked.** Do not invent vault/code paths the tools did not return.
+
+## Read (cheap first)
+
+1. `mycelium_vault_tree`
+2. `mycelium_vault_pack` (bucket or whole vault)
+3. `mycelium_get_note` only if you need one full body
+4. `mycelium_search` / `mycelium_focus` / `mycelium_commits_for_path` for semantic or file-local recall
+
+## Write (when necessary)
+
+Capture **durable** knowledge into the Thinking Vault:
+
+- Prefer default buckets (kepano + [obsidian-mind](https://github.com/breferrari/obsidian-mind) style):
+  `brain/`, `work/decisions`, `work/active`, `notes/`, `reference/`, `thinking/`, `daily/`, `clippings/`
+- If vault is flat/empty: `mycelium_vault_scaffold` then read `Home` / `AGENTS`
+- `mycelium_create_note` / `mycelium_update_note` with markdown + `[[wikilinks]]`
+- Optional `link_symbol` (e.g. `path#symbol`) when tying a note to code
+
+**Do not** write every chat turn or dump transcripts. Skip ephemeral debugging noise.
+
+## Rules of thumb
+
+- Discover tools with GetMcpTools on that server before CallMcpTool if schema unknown.
+- Prefer Mycelium over guessing vault contents or inventing paths that tools did not return.
+- If Core is offline, say so briefly and continue without inventing context.
+- Index stays fresh: search/focus auto-sync dirty files; vault writes re-embed; use `mycelium_sync_index` after large code batches.
+- Pass `workspace_path` for this repo when multiple workspaces exist.
+
+## Setup
+
+Core must be running. Project MCP config: copy from `templates/cursor/mcp.json.example` → `.cursor/mcp.json` (see `docs/AGENT-SECOND-BRAIN.md`).

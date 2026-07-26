@@ -14,17 +14,35 @@ import {
 } from "../api/client";
 
 const MODEL_OPTIONS = [
-  "sentence-transformers/all-MiniLM-L6-v2",
-  "jinaai/jina-embeddings-v2-base-code",
-  "mycelium-hashing-v1",
-];
+  {
+    id: "sentence-transformers/all-MiniLM-L6-v2",
+    name: "MiniLM L6",
+    badge: "Recommended",
+    blurb: "Best default — fast, solid semantic recall for code + notes.",
+    detail: "Small local model · ships as Mycelium default",
+  },
+  {
+    id: "jinaai/jina-embeddings-v2-base-code",
+    name: "Jina Code v2",
+    badge: "Code-first",
+    blurb: "Stronger on source and identifiers; larger download and slower index.",
+    detail: "Code-specialized · heavier on disk/CPU",
+  },
+  {
+    id: "mycelium-hashing-v1",
+    name: "Hashing (dev)",
+    badge: "Tests only",
+    blurb: "No neural model — fine for CI, weak for real search.",
+    detail: "Offline stub · not for daily indexing",
+  },
+] as const;
 
 export function SettingsPage() {
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [runtime, setRuntime] = useState<Partial<EmbeddingStatus>>({});
   const [vaultDir, setVaultDir] = useState("");
   const [historyDepth, setHistoryDepth] = useState(500);
-  const [model, setModel] = useState(MODEL_OPTIONS[0]);
+  const [model, setModel] = useState<string>(MODEL_OPTIONS[0].id);
   const [githubClientId, setGithubClientId] = useState("");
   const [impactTracking, setImpactTracking] = useState(true);
   const [github, setGithub] = useState<GitHubStatus | null>(null);
@@ -353,30 +371,108 @@ export function SettingsPage() {
           <h3 className="font-label-caps text-label-caps text-on-surface-variant border-b border-border pb-xs uppercase tracking-widest">
             Local Indexing
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-md items-start">
-            <div className="md:col-span-1 pt-sm">
-              <label className="font-label-md text-label-md text-foreground block">
+
+          <div className="space-y-sm">
+            <div className="flex flex-wrap items-baseline justify-between gap-sm">
+              <label className="font-label-md text-label-md text-foreground">
                 Embedding model
               </label>
-              <span className="font-body-sm text-body-sm text-on-surface-variant block mt-xs">
-                Active: {runtime.model_id ?? settings?.embedding_model ?? "…"} (
-                {runtime.backend ?? "…"})
-              </span>
+              <p className="font-technical-mono-sm text-technical-mono-sm text-muted">
+                Active: {runtime.model_id ?? settings?.embedding_model ?? "…"} ·{" "}
+                {runtime.backend ?? "…"}
+              </p>
             </div>
-            <div className="md:col-span-3">
-              <select
-                className="w-full bg-surface-container border border-border rounded-lg h-10 px-md font-technical-mono text-technical-mono text-foreground focus:outline-none focus:border-primary transition-colors duration-150"
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-              >
-                {[model, ...MODEL_OPTIONS.filter((m) => m !== model)].map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
+            <p className="font-body-sm text-body-sm text-on-surface-variant">
+              Changing model updates config; restart Core, then re-index workspaces
+              so vectors match.
+            </p>
+            {runtime.backend === "hashing" &&
+              (runtime.notice || "")
+                .toLowerCase()
+                .includes("falling back") && (
+              <p className="font-body-sm text-body-sm text-on-surface-variant rounded-lg border border-border bg-surface-container-lowest px-md py-sm">
+                Packaged Desktop is currently on the offline hashing embedder
+                (sentence-transformers is not bundled yet). Indexing still
+                completes; semantic search quality is limited.
+              </p>
+            )}
+            <div className="grid gap-sm" role="radiogroup" aria-label="Embedding model">
+              {MODEL_OPTIONS.map((opt) => {
+                const selected = model === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    onClick={() => setModel(opt.id)}
+                    className={`text-left rounded-xl border px-md py-md transition-colors duration-150 ${
+                      selected
+                        ? "border-primary/50 bg-accent-dim shadow-[inset_0_0_0_1px_rgba(0,209,178,0.22)]"
+                        : "border-border bg-surface-container-lowest hover:border-primary/30 hover:bg-surface-container-high/40"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-md">
+                      <div className="min-w-0 space-y-xs">
+                        <div className="flex flex-wrap items-center gap-sm">
+                          <span className="font-label-md text-label-md text-on-surface">
+                            {opt.name}
+                          </span>
+                          <span
+                            className={`rounded-md px-sm py-px font-label-caps text-label-caps uppercase tracking-wider ${
+                              opt.badge === "Recommended"
+                                ? "bg-primary/15 text-primary"
+                                : opt.badge === "Tests only"
+                                  ? "bg-surface-container-high text-muted"
+                                  : "bg-surface-container-high text-on-surface-variant"
+                            }`}
+                          >
+                            {opt.badge}
+                          </span>
+                        </div>
+                        <p className="font-body-sm text-body-sm text-on-surface-variant">
+                          {opt.blurb}
+                        </p>
+                        <p className="font-technical-mono-sm text-technical-mono-sm text-muted truncate">
+                          {opt.detail}
+                        </p>
+                      </div>
+                      <span
+                        className={`mt-xs flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                          selected
+                            ? "border-primary bg-primary text-on-primary"
+                            : "border-border bg-transparent"
+                        }`}
+                        aria-hidden
+                      >
+                        {selected ? (
+                          <span className="material-symbols-outlined text-[14px]">
+                            check
+                          </span>
+                        ) : null}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+              {!MODEL_OPTIONS.some((o) => o.id === model) && model ? (
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked
+                  className="text-left rounded-xl border border-primary/50 bg-accent-dim px-md py-md"
+                >
+                  <p className="font-label-md text-label-md text-on-surface">
+                    Custom model
+                  </p>
+                  <p className="font-technical-mono-sm text-technical-mono-sm text-muted mt-xs break-all">
+                    {model}
+                  </p>
+                </button>
+              ) : null}
             </div>
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-4 gap-md items-start pt-md">
             <div className="md:col-span-1 pt-sm">
               <label className="font-label-md text-label-md text-foreground block">

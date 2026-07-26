@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
+
+from mycelium.adapters.store.json_io import atomic_write_json, read_json_object
 
 
 class JsonEdgeStore:
@@ -16,19 +17,49 @@ class JsonEdgeStore:
             self._write({})
 
     def _read(self) -> dict[str, dict[str, Any]]:
-        raw = json.loads(self._path.read_text(encoding="utf-8"))
+        raw = read_json_object(self._path, default={})
         return raw if isinstance(raw, dict) else {}
 
     def _write(self, data: dict[str, dict[str, Any]]) -> None:
-        self._path.write_text(
-            json.dumps(data, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
+        atomic_write_json(self._path, data)
 
     def replace_snapshot(self, edges: list[dict[str, Any]]) -> int:
         data = {e["id"]: e for e in edges}
         self._write(data)
         return len(data)
+
+    def replace_kinds(self, *, kinds: set[str], edges: list[dict[str, Any]]) -> int:
+        """Replace only edges whose edge_kind is in `kinds`; keep others."""
+        data = {
+            eid: row
+            for eid, row in self._read().items()
+            if row.get("edge_kind") not in kinds
+        }
+        for edge in edges:
+            data[edge["id"]] = edge
+        self._write(data)
+        return len(data)
+
+    def upsert_edges(self, edges: list[dict[str, Any]]) -> int:
+        data = self._read()
+        for edge in edges:
+            data[edge["id"]] = edge
+        self._write(data)
+        return len(data)
+
+    def delete_by_source(self, source_id: str, *, kinds: set[str] | None = None) -> int:
+        data = self._read()
+        keep: dict[str, dict[str, Any]] = {}
+        removed = 0
+        for eid, row in data.items():
+            if row.get("source_id") == source_id and (
+                kinds is None or row.get("edge_kind") in kinds
+            ):
+                removed += 1
+                continue
+            keep[eid] = row
+        self._write(keep)
+        return removed
 
     def list_edges(self, *, kind: str | None = None, limit: int = 100) -> list[dict[str, Any]]:
         return self.list_all(kind=kind)[: max(0, limit)]

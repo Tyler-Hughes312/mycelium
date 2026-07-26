@@ -107,6 +107,20 @@ class WorkspaceWatcherManager:
                 self._timer = None
             self._pending.clear()
 
+    def status(self) -> dict[str, object]:
+        """Observability for /health — whether FS watching is active."""
+        try:
+            import watchdog  # noqa: F401
+            available = True
+        except ImportError:
+            available = False
+        with self._lock:
+            count = len(self._observers)
+        return {
+            "available": available and self._watchdog_available,
+            "workspaces": count,
+        }
+
     def _schedule(self, workspace_id: str, abs_path: str) -> None:
         path = Path(abs_path)
         if any(part in SKIP_DIR_PARTS for part in path.parts):
@@ -137,3 +151,100 @@ class WorkspaceWatcherManager:
                     workspace_id,
                     abs_path,
                 )
+
+
+class VaultWatcher:
+    """Watch Thinking Vault `.md` files and re-embed on change."""
+
+    def __init__(self, vault_service: object) -> None:
+        self._vault = vault_service
+        self._observer: object | None = None
+        self._pending: dict[str, float] = {}
+        self._lock = threading.Lock()
+        self._timer: threading.Timer | None = None
+
+    def start(self, vault_dir: str | Path) -> bool:
+        try:
+            from watchdog.events import FileSystemEventHandler
+            from watchdog.observers import Observer
+        except ImportError:
+            logger.warning("watchdog not installed; vault watcher disabled")
+            return False
+
+        root = Path(vault_dir).expanduser().resolve()
+        if not root.is_dir():
+            return False
+        if self._observer is not None:
+            return True
+
+        manager = self
+
+        class Handler(FileSystemEventHandler):
+            def on_modified(self, event):  # type: ignore[no-untyped-def]
+                if event.is_directory:
+                    return
+                manager._schedule(str(event.src_path))
+
+            def on_created(self, event):  # type: ignore[no-untyped-def]
+                if event.is_directory:
+                    return
+                manager._schedule(str(event.src_path))
+
+            def on_deleted(self, event):  # type: ignore[no-untyped-def]
+                if event.is_directory:
+                    return
+                manager._schedule(str(event.src_path))
+
+            def on_moved(self, event):  # type: ignore[no-untyped-def]
+                if getattr(event, "dest_path", None):
+                    manager._schedule(str(event.dest_path))
+                manager._schedule(str(event.src_path))
+
+        observer = Observer()
+        observer.schedule(Handler(), str(root), recursive=True)
+        observer.daemon = True
+        observer.start()
+        self._observer = observer
+        logger.info("watching vault at %s", root)
+        return True
+
+    def stop(self) -> None:
+        observer = self._observer
+        self._observer = None
+        if observer is not None:
+            stop = getattr(observer, "stop", None)
+            join = getattr(observer, "join", None)
+            if callable(stop):
+                stop()
+            if callable(join):
+                join(timeout=2)
+        with self._lock:
+            if self._timer is not None:
+                self._timer.cancel()
+                self._timer = None
+            self._pending.clear()
+
+    def _schedule(self, abs_path: str) -> None:
+        path = Path(abs_path)
+        if path.suffix.lower() != ".md":
+            return
+        with self._lock:
+            self._pending[str(path)] = time.monotonic()
+            if self._timer is not None:
+                self._timer.cancel()
+            self._timer = threading.Timer(DEBOUNCE_SEC, self._flush)
+            self._timer.daemon = True
+            self._timer.start()
+
+    def _flush(self) -> None:
+        with self._lock:
+            paths = list(self._pending.keys())
+            self._pending.clear()
+            self._timer = None
+        for abs_path in paths:
+            try:
+                reindex = getattr(self._vault, "reindex_path", None)
+                if callable(reindex):
+                    reindex(abs_path)
+            except Exception:  # noqa: BLE001
+                logger.exception("vault reindex failed for %s", abs_path)

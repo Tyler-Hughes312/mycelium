@@ -1,4 +1,4 @@
-"""Embedding bootstrap — resolve runtime, cache dir, optional ST model (FR-8)."""
+"""Embedding bootstrap — resolve runtime, cache dir, ST model download (FR-8)."""
 
 from __future__ import annotations
 
@@ -11,6 +11,9 @@ from mycelium.adapters.embeddings.hashing import HashingEmbedder
 from mycelium.core.ports.embedding_runtime import EmbeddingRuntime
 
 logger = logging.getLogger(__name__)
+
+# Lean local default — ~80MB, semantic enough for hybrid RAG.
+DEFAULT_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
 
 @dataclass
@@ -32,19 +35,20 @@ def default_models_dir(home: Path | None = None) -> Path:
 
 def bootstrap_embedder(
     *,
-    model: str = "mycelium-hashing-v1",
+    model: str = DEFAULT_EMBEDDING_MODEL,
     cache_dir: Path | None = None,
     dimension: int = 384,
 ) -> tuple[EmbeddingRuntime, EmbeddingStatus]:
     """
     Create an EmbeddingRuntime.
 
-    - `mycelium-hashing-v1` (default): immediate offline, no download
-    - any other id: attempt sentence-transformers load from cache_dir;
+    - `mycelium-hashing-v1` / `hashing`: deterministic offline stub (tests)
+    - any other id: sentence-transformers load/download into cache_dir;
       on failure, fall back to hashing with a clear notice
     """
     cache = cache_dir or default_models_dir()
     cache.mkdir(parents=True, exist_ok=True)
+    model = (model or DEFAULT_EMBEDDING_MODEL).strip()
 
     if model in {"mycelium-hashing-v1", "hashing", "local-hash"}:
         runtime: EmbeddingRuntime = HashingEmbedder(dimension=dimension)
@@ -59,7 +63,6 @@ def bootstrap_embedder(
         logger.info(status.notice)
         return runtime, status
 
-    # Optional heavy path
     try:
         from mycelium.adapters.embeddings.sentence_transformers_runtime import (
             SentenceTransformerEmbedder,
@@ -72,7 +75,10 @@ def bootstrap_embedder(
             cache_dir=str(cache),
             dimension=runtime.dimension(),
             backend="sentence-transformers",
-            notice=f"Loaded embedding model '{model}' from cache {cache}.",
+            notice=(
+                f"Loaded local embedding model '{model}' "
+                f"(cached under {cache}; subsequent runs are offline)."
+            ),
         )
         logger.info(status.notice)
         return runtime, status

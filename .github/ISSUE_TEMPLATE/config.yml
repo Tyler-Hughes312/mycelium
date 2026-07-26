@@ -1,0 +1,9 @@
+# Prefer issues for bugs / feature requests.
+blank_issues_enabled: true
+contact_links:
+  - name: Deploy / ops runbook
+    url: https://github.com/Tyler-Hughes312/mycelium/blob/master/docs/DEPLOY.md
+    about: Install, upgrade, MCP, and local release checks
+  - name: Agent second brain (MCP)
+    url: https://github.com/Tyler-Hughes312/mycelium/blob/master/docs/AGENT-SECOND-BRAIN.md
+    about: How agents read/write the vault via mycelium-mcp

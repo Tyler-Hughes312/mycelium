@@ -75,12 +75,15 @@ def _python_symbols(path_str: str, source: str) -> list[SymbolRecord]:
     rows: list[SymbolRecord] = []
 
     class Visitor(ast.NodeVisitor):
+        def __init__(self) -> None:
+            self._class_depth = 0
+
         def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
             rows.append(
                 SymbolRecord(
                     path=path_str,
                     name=node.name,
-                    kind="function",
+                    kind="method" if self._class_depth else "function",
                     language="python",
                     start_line=int(node.lineno),
                     end_line=int(getattr(node, "end_lineno", node.lineno) or node.lineno),
@@ -93,7 +96,7 @@ def _python_symbols(path_str: str, source: str) -> list[SymbolRecord]:
                 SymbolRecord(
                     path=path_str,
                     name=node.name,
-                    kind="function",
+                    kind="method" if self._class_depth else "function",
                     language="python",
                     start_line=int(node.lineno),
                     end_line=int(getattr(node, "end_lineno", node.lineno) or node.lineno),
@@ -112,7 +115,9 @@ def _python_symbols(path_str: str, source: str) -> list[SymbolRecord]:
                     end_line=int(getattr(node, "end_lineno", node.lineno) or node.lineno),
                 )
             )
+            self._class_depth += 1
             self.generic_visit(node)
+            self._class_depth -= 1
 
     Visitor().visit(tree)
     return rows

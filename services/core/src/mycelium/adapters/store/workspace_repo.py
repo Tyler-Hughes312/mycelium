@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-import json
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+from mycelium.adapters.store.json_io import atomic_write_json, read_json_object
 
 
 class WorkspaceError(Exception):
@@ -45,16 +46,13 @@ class JsonFileWorkspaceRepo:
             self._write([])
 
     def _read(self) -> list[dict[str, Any]]:
-        raw = json.loads(self._path.read_text(encoding="utf-8"))
+        raw = read_json_object(self._path, default=[])
         if not isinstance(raw, list):
             return []
         return raw
 
     def _write(self, rows: list[dict[str, Any]]) -> None:
-        self._path.write_text(
-            json.dumps(rows, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
+        atomic_write_json(self._path, rows)
 
     def list_workspaces(self) -> list[dict[str, Any]]:
         return self._read()

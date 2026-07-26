@@ -1,9 +1,18 @@
 import type { HTMLAttributes } from "react";
 
-export type ProvenanceKind = "Symbol" | "Commit" | "Note" | "File";
+export type ProvenanceKind =
+  | "Function"
+  | "Method"
+  | "Class"
+  | "Type"
+  | "Const"
+  | "Symbol"
+  | "Commit"
+  | "Note"
+  | "File";
 
 type ProvenanceChipProps = HTMLAttributes<HTMLSpanElement> & {
-  kind: ProvenanceKind;
+  kind: ProvenanceKind | string;
 };
 
 export function ProvenanceChip({

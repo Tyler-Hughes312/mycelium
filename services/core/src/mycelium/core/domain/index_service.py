@@ -8,17 +8,21 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Callable
 
-from mycelium.adapters.git.files import language_for, list_repo_files
+from mycelium.adapters.git.files import git_dirty_paths, git_head, language_for, list_repo_files
 from mycelium.adapters.git.history import GitError, read_commit_history
 from mycelium.adapters.parse.symbols import SymbolRecord, extract_symbols
 from mycelium.adapters.store.commit_store import JsonCommitStore
 from mycelium.adapters.store.edge_store import JsonEdgeStore
 from mycelium.adapters.store.symbol_store import JsonSymbolStore
+from mycelium.adapters.store.vector_store import JsonVectorStore
 from mycelium.adapters.store.workspace_repo import JsonFileWorkspaceRepo, WorkspaceError
 from mycelium.core.domain.co_change import build_co_changed_edges
+from mycelium.adapters.embeddings.bootstrap import (
+    DEFAULT_EMBEDDING_MODEL,
+    EmbeddingStatus,
+)
 from mycelium.core.domain.embedding_service import EmbeddingService
 from mycelium.core.ports.embedding_runtime import EmbeddingRuntime
-from mycelium.adapters.embeddings.bootstrap import EmbeddingStatus
 
 
 def _now_iso() -> str:
@@ -53,7 +57,7 @@ class IndexService:
         history_depth: int = 500,
         embedding_runtime: EmbeddingRuntime | None = None,
         embedding_status: EmbeddingStatus | None = None,
-        embedding_model: str = "mycelium-hashing-v1",
+        embedding_model: str = DEFAULT_EMBEDDING_MODEL,
     ) -> None:
         self._data_dir = data_dir
         self._workspaces = workspace_repo
@@ -74,6 +78,14 @@ class IndexService:
     @property
     def embedding_service(self) -> EmbeddingService:
         return self._embedder
+
+    @property
+    def history_depth(self) -> int:
+        return self._history_depth
+
+    @history_depth.setter
+    def history_depth(self, value: int) -> None:
+        self._history_depth = max(1, int(value))
 
     def _workspace_dir(self, workspace_id: str) -> Path:
         return self._data_dir / "workspaces" / workspace_id
@@ -319,27 +331,33 @@ class IndexService:
             status="indexing",
             phase="embeddings",
             progress=90,
-            message=self._embedder.status.notice,
+            message=(
+                "Embedding vectors (offline hashing)…"
+                if self._embedder.status.backend == "hashing"
+                else "Embedding vectors…"
+            ),
             commits_indexed=len(commits),
             commits_total=commit_total,
             files_indexed=files_indexed,
             symbols_indexed=symbols_indexed,
             edges_indexed=edges_indexed,
+            embedding_notice=self._embedder.status.notice,
         )
         embed_stats = self._embedder.embed_workspace(workspace_id)
         vectors_indexed = int(embed_stats.get("vectors") or 0)
 
         finished = _now_iso()
-        self._workspaces.update(
-            workspace_id,
-            {
-                "status": "healthy",
-                "commits": commit_total,
-                "symbols": symbols_indexed,
-                "indexed_ago": "just now",
-                "last_indexed_at": finished,
-            },
-        )
+        head = git_head(repo_path)
+        update_row: dict[str, Any] = {
+            "status": "healthy",
+            "commits": commit_total,
+            "symbols": symbols_indexed,
+            "indexed_ago": "just now",
+            "last_indexed_at": finished,
+        }
+        if head:
+            update_row["indexed_commit"] = head
+        self._workspaces.update(workspace_id, update_row)
         result = IndexResult(
             workspace_id=workspace_id,
             status="complete",
@@ -461,7 +479,15 @@ class IndexService:
         rel = self._resolve_rel_path(repo_path, path)
         abs_path = repo_path / rel
         path_str = rel.as_posix()
-        store = JsonSymbolStore(self._workspace_dir(workspace_id))
+        workspace_dir = self._workspace_dir(workspace_id)
+        store = JsonSymbolStore(workspace_dir)
+        vstore = JsonVectorStore(workspace_dir)
+        file_id = f"file:{path_str}"
+        prior_symbol_ids = [
+            str(row["id"])
+            for row in store.list_all()
+            if row.get("path") == path_str and row.get("id")
+        ]
         started = time.perf_counter()
 
         if not abs_path.exists():
@@ -471,6 +497,9 @@ class IndexService:
                 symbols=[],
                 deleted=True,
             )
+            for node_id in prior_symbol_ids:
+                vstore.delete(node_id)
+            vstore.delete(file_id)
             elapsed_ms = (time.perf_counter() - started) * 1000
             self._workspaces.update(
                 workspace_id,
@@ -487,6 +516,7 @@ class IndexService:
                 "symbols_upserted": 0,
                 "files_total": files_n,
                 "symbols_total": symbols_n,
+                "vectors_purged": len(prior_symbol_ids) + 1,
                 "elapsed_ms": round(elapsed_ms, 2),
                 "stable_ids": True,
             }
@@ -496,7 +526,7 @@ class IndexService:
 
         lang = language_for(rel)
         file_node = {
-            "id": f"file:{path_str}",
+            "id": file_id,
             "kind": "File",
             "path": path_str,
             "language": lang,
@@ -525,10 +555,22 @@ class IndexService:
                 "path": s.path,
                 "symbol_kind": s.kind,
                 "language": s.language,
+                "start_line": s.start_line,
+                "end_line": s.end_line,
             }
             for s in symbols
         ]
-        embed_stats = self._embedder.embed_symbols(workspace_id, symbol_rows)
+        embed_stats = self._embedder.embed_symbols(
+            workspace_id,
+            symbol_rows,
+            file_node=file_node,
+        )
+        keep = set(symbol_ids)
+        purged = 0
+        for node_id in prior_symbol_ids:
+            if node_id not in keep:
+                if vstore.delete(node_id):
+                    purged += 1
         elapsed_ms = (time.perf_counter() - started) * 1000
         self._workspaces.update(
             workspace_id,
@@ -548,8 +590,77 @@ class IndexService:
             "files_total": files_n,
             "symbols_total": symbols_n,
             "vectors_written": embed_stats.get("written", 0),
+            "vectors_purged": purged,
             "elapsed_ms": round(elapsed_ms, 2),
             "stable_ids": True,
+        }
+
+    def sync_pending_changes(self, workspace_id: str) -> dict[str, Any]:
+        """
+        Bring index up to date with the working tree / HEAD (MCP auto-sync).
+
+        - Dirty (uncommitted) source files → incremental reindex_file
+        - HEAD moved since last full index → start async full index
+        """
+        ws = self._workspaces.get(workspace_id)
+        if ws is None:
+            raise WorkspaceError("not_found", f"Unknown workspace id: {workspace_id}")
+
+        repo_path = Path(str(ws["path"])).resolve()
+        head = git_head(repo_path)
+        indexed_commit = ws.get("indexed_commit")
+        files_synced: list[str] = []
+        errors: list[str] = []
+        full_index_started = False
+
+        if self.is_running(workspace_id):
+            return {
+                "workspace_id": workspace_id,
+                "fresh": False,
+                "reason": "index_already_running",
+                "files_synced": [],
+                "full_index_started": False,
+                "head": head,
+                "indexed_commit": indexed_commit,
+            }
+
+        if head and indexed_commit and head != indexed_commit:
+            self.start_index_async(workspace_id)
+            full_index_started = True
+        elif head and not indexed_commit and not ws.get("last_indexed_at"):
+            self.start_index_async(workspace_id)
+            full_index_started = True
+        else:
+            for rel in git_dirty_paths(repo_path):
+                # Skip non-source unless it's a known language (still File node for others)
+                suffix = Path(rel).suffix.lower()
+                if suffix and language_for(Path(rel)) is None and suffix not in {
+                    ".md",
+                    ".json",
+                    ".toml",
+                    ".yml",
+                    ".yaml",
+                }:
+                    # Still try common source-less? skip binaries by empty suffix handled
+                    if suffix in {".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".pdf", ".zip"}:
+                        continue
+                try:
+                    self.reindex_file(workspace_id, rel)
+                    files_synced.append(rel)
+                except WorkspaceError as exc:
+                    errors.append(f"{rel}:{exc.code}")
+                except Exception as exc:  # noqa: BLE001
+                    errors.append(f"{rel}:{exc}")
+
+        return {
+            "workspace_id": workspace_id,
+            "fresh": not full_index_started and not files_synced and not errors,
+            "files_synced": files_synced,
+            "files_synced_count": len(files_synced),
+            "full_index_started": full_index_started,
+            "head": head,
+            "indexed_commit": indexed_commit,
+            "errors": errors[:10],
         }
 
     @staticmethod

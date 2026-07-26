@@ -18,9 +18,11 @@ export default function App() {
       <main>
         <Hero />
         <Capabilities />
-        <Outcomes />
-        <Setup />
-        <Impact />
+        <div className="page-ribbon">
+          <Outcomes />
+          <Setup />
+          <Impact />
+        </div>
       </main>
       <SiteFooter />
     </div>

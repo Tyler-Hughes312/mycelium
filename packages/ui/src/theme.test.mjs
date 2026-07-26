@@ -14,14 +14,14 @@ function varValue(name) {
   return m[1].trim().toLowerCase();
 }
 
-test("Soft Electric primary replaces hypha green", () => {
-  assert.equal(varValue("--mycelium-primary"), "#6ec8ff");
-  assert.equal(varValue("--mycelium-accent-hypha"), "#6ec8ff");
-  assert.notEqual(varValue("--mycelium-primary"), "#9cd2ba");
+test("logo E slate + teal primary", () => {
+  assert.equal(varValue("--mycelium-primary"), "#00d1b2");
+  assert.equal(varValue("--mycelium-accent-hypha"), "#00d1b2");
+  assert.equal(varValue("--mycelium-slate"), "#3a3f44");
 });
 
-test("muted/dim accents and warn secondary exist", () => {
-  assert.equal(varValue("--mycelium-accent-muted"), "#3a7fa8");
-  assert.equal(varValue("--mycelium-accent-dim"), "#1a3a4d");
-  assert.equal(varValue("--mycelium-secondary"), "#e5c276");
+test("slate surfaces and teal dim accents", () => {
+  assert.equal(varValue("--mycelium-accent-muted"), "#1a9a86");
+  assert.equal(varValue("--mycelium-accent-dim"), "#0a2e2a");
+  assert.equal(varValue("--mycelium-secondary"), "#c5ccd1");
 });

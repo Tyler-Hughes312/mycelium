@@ -16,6 +16,7 @@ import {
   type SymbolNode,
   type Workspace,
 } from "../api/client";
+import { isTauriShell, openLocalFile, pickDirectory } from "../lib/fs";
 
 function formatTime(iso?: string) {
   if (!iso) return "--:--:--";
@@ -110,6 +111,29 @@ export function IndexPage() {
       pushLog(msg, "err");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function onChooseFolder() {
+    const path = await pickDirectory("Choose a git repository folder");
+    if (!path) return;
+    setPathDraft(path);
+    if (isTauriShell()) {
+      setBusy(true);
+      setError(null);
+      try {
+        const ws = await registerWorkspace(path);
+        pushLog(`Registered ${ws.path}`, "ok");
+        setPathDraft("");
+        await refreshWorkspaces();
+        setSelectedId(ws.id ?? null);
+      } catch (err: unknown) {
+        const msg = err instanceof ApiError ? err.message : "Register failed";
+        setError(msg);
+        pushLog(msg, "err");
+      } finally {
+        setBusy(false);
+      }
     }
   }
 
@@ -215,25 +239,45 @@ export function IndexPage() {
               </span>
               Add Workspace
             </h3>
-            <input
-              className="flex-1 bg-surface-container-lowest border border-border rounded-lg px-sm py-xs text-on-surface font-technical-mono text-technical-mono focus:outline-none focus:border-primary transition-colors h-8"
-              type="text"
-              placeholder="~/dev/my-repo"
-              value={pathDraft}
-              onChange={(e) => setPathDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void onRegister();
-              }}
-            />
             <button
               type="button"
-              disabled={busy || !pathDraft.trim()}
-              onClick={() => void onRegister()}
-              className="bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 hover:border-primary/40 px-md py-sm rounded-lg font-label-md text-label-md transition-colors mt-xs flex items-center justify-center w-full disabled:opacity-50"
+              disabled={busy}
+              onClick={() => void onChooseFolder()}
+              className="bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 hover:border-primary/40 px-md py-sm rounded-lg font-label-md text-label-md transition-colors flex items-center justify-center w-full disabled:opacity-50"
             >
-              <span className="material-symbols-outlined mr-xs text-[16px]">add</span>
-              Initialize Path
+              <span className="material-symbols-outlined mr-xs text-[16px]">
+                folder_open
+              </span>
+              {busy ? "Adding…" : "Choose folder…"}
             </button>
+            {!isTauriShell() && (
+              <>
+                <input
+                  className="flex-1 bg-surface-container-lowest border border-border rounded-lg px-sm py-xs text-on-surface font-technical-mono text-technical-mono focus:outline-none focus:border-primary transition-colors h-8"
+                  type="text"
+                  placeholder="Or paste ~/dev/my-repo"
+                  value={pathDraft}
+                  onChange={(e) => setPathDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void onRegister();
+                  }}
+                />
+                <button
+                  type="button"
+                  disabled={busy || !pathDraft.trim()}
+                  onClick={() => void onRegister()}
+                  className="bg-surface-container border border-border hover:bg-surface-container-high px-md py-sm rounded-lg font-label-md text-label-md transition-colors flex items-center justify-center w-full disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined mr-xs text-[16px]">add</span>
+                  Initialize Path
+                </button>
+              </>
+            )}
+            {isTauriShell() && pathDraft && (
+              <p className="font-technical-mono-sm text-technical-mono-sm text-muted truncate">
+                {pathDraft}
+              </p>
+            )}
           </section>
 
           <section className="bg-surface-container-lowest border border-border rounded-lg p-md flex flex-col gap-sm">
@@ -263,6 +307,26 @@ export function IndexPage() {
               </button>
             ))}
           </section>
+
+          {status?.embedding_notice &&
+            status.embedding_notice.toLowerCase().includes("falling back") && (
+            <section className="bg-surface-container-lowest border border-border rounded-lg p-md relative flex items-start gap-sm">
+              <span className="material-symbols-outlined text-muted mt-[2px]">
+                info
+              </span>
+              <div className="flex-1 min-w-0">
+                <h4 className="font-label-md text-label-md text-on-surface mb-xs">
+                  Using offline hashing embedder
+                </h4>
+                <p className="font-body-sm text-body-sm text-on-surface-variant break-words">
+                  Packaged Desktop Core does not ship torch/sentence-transformers
+                  yet, so indexing uses a local hashing fallback. Search still
+                  works; semantic quality is weaker until a full embedding model
+                  is available.
+                </p>
+              </div>
+            </section>
+          )}
 
           {status?.status === "failed" && (
             <section className="bg-surface-container-lowest border border-danger/30 rounded-lg p-md relative flex items-start gap-sm">
@@ -384,15 +448,26 @@ export function IndexPage() {
                 <p className="text-muted">No symbols indexed yet.</p>
               )}
               {symbols.map((s) => (
-                <div key={s.id} className="border-b border-border/50 pb-xs">
-                  <div className="text-on-surface truncate">
+                <button
+                  key={s.id}
+                  type="button"
+                  title={`Open ${s.path}:${s.start_line}`}
+                  onClick={() => {
+                    void openLocalFile(s.path, {
+                      line: s.start_line,
+                      workspaceRoot: selected?.path,
+                    });
+                  }}
+                  className="w-full min-w-0 text-left border-b border-border/50 pb-xs hover:bg-surface-container-low/80 rounded-sm px-1 -mx-1 transition-colors"
+                >
+                  <div className="text-on-surface truncate min-w-0">
                     <span className="text-primary">{s.name}</span>{" "}
                     <span className="text-muted">({s.symbol_kind})</span>
                   </div>
-                  <div className="text-muted">
+                  <div className="text-muted truncate min-w-0">
                     {s.path}:{s.start_line}-{s.end_line} · {s.language}
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </section>
@@ -411,12 +486,12 @@ export function IndexPage() {
                 <p className="text-muted">No commits indexed yet.</p>
               )}
               {commits.map((c) => (
-                <div key={c.hash} className="border-b border-border/50 pb-xs">
-                  <div className="text-on-surface truncate">
+                <div key={c.hash} className="border-b border-border/50 pb-xs min-w-0">
+                  <div className="text-on-surface truncate min-w-0">
                     <span className="text-primary">{c.hash.slice(0, 7)}</span>{" "}
                     {c.message}
                   </div>
-                  <div className="text-muted">
+                  <div className="text-muted truncate min-w-0">
                     {c.author} · {formatTime(c.timestamp)} ·{" "}
                     {c.changed_paths.length} files
                   </div>
@@ -439,13 +514,13 @@ export function IndexPage() {
                 <p className="text-muted">No co-change edges yet.</p>
               )}
               {edges.map((e) => (
-                <div key={e.id} className="border-b border-border/50 pb-xs">
-                  <div className="text-on-surface truncate">
+                <div key={e.id} className="border-b border-border/50 pb-xs min-w-0">
+                  <div className="text-on-surface truncate min-w-0">
                     <span className="text-primary">{e.source_name}</span>
                     <span className="text-muted"> ↔ </span>
                     <span className="text-primary">{e.target_name}</span>
                   </div>
-                  <div className="text-muted truncate">
+                  <div className="text-muted truncate min-w-0">
                     {e.source_path} · {e.target_path}
                   </div>
                 </div>
@@ -497,11 +572,11 @@ function LogLine({
   children: ReactNode;
 }) {
   return (
-    <div className="flex relative">
+    <div className="flex relative min-w-0">
       <span className="w-20 text-on-surface-variant opacity-50 shrink-0 select-none">
         {time}
       </span>
-      <span>{children}</span>
+      <span className="min-w-0 break-words">{children}</span>
     </div>
   );
 }

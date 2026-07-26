@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { getHealth } from "../api/client";
+import { routesRemountKey, shouldMountRoutes } from "../lib/coreGate";
 import { isTauriShell } from "../lib/fs";
 
 async function requestCoreRestart() {
@@ -40,6 +41,7 @@ function navClass({ isActive }: { isActive: boolean }) {
 export function AppShell() {
   const inTauri = isTauriShell();
   const [coreConnected, setCoreConnected] = useState(false);
+  const [watching, setWatching] = useState<string | null>(null);
   const [booting, setBooting] = useState(inTauri);
   const [retrying, setRetrying] = useState(false);
 
@@ -48,9 +50,20 @@ export function AppShell() {
       const health = await getHealth();
       const ok = health.status === "ok";
       setCoreConnected(ok);
+      if (ok && health.watchers) {
+        if (!health.watchers.available) {
+          setWatching("Watcher unavailable");
+        } else {
+          const n = health.watchers.workspaces ?? 0;
+          setWatching(n > 0 ? `Watching ${n}` : "Watcher idle");
+        }
+      } else {
+        setWatching(null);
+      }
       return ok;
     } catch {
       setCoreConnected(false);
+      setWatching(null);
       return false;
     }
   }, []);
@@ -98,6 +111,7 @@ export function AppShell() {
   }
 
   const showBanner = !coreConnected && !booting;
+  const mountRoutes = shouldMountRoutes(inTauri, booting, coreConnected);
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-surface-dim text-on-surface">
@@ -185,7 +199,9 @@ export function AppShell() {
                     : "Core offline"}
               </p>
               <p className="font-technical-mono-sm text-technical-mono-sm text-muted truncate">
-                127.0.0.1:8787
+                {coreConnected && watching
+                  ? watching
+                  : "127.0.0.1:8787"}
               </p>
             </div>
           </div>
@@ -253,7 +269,27 @@ export function AppShell() {
           </div>
         )}
         <div className="flex-1 min-h-0 overflow-hidden">
-          <Outlet />
+          {mountRoutes ? (
+            <Outlet key={routesRemountKey(coreConnected)} />
+          ) : (
+            <div className="h-full flex items-center justify-center p-xl">
+              <div className="text-center max-w-sm space-y-sm">
+                <span
+                  className="material-symbols-outlined text-[28px] text-primary animate-pulse"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >
+                  hourglass_empty
+                </span>
+                <p className="font-body-md text-body-md text-on-surface">
+                  Starting Core…
+                </p>
+                <p className="font-body-sm text-body-sm text-muted">
+                  Waiting for the local service on 127.0.0.1:8787 before loading
+                  this page.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

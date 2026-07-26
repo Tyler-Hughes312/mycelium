@@ -4,19 +4,44 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mycelium-core"
-version = "0.0.1"
-description = "Mycelium local Core Service"
+version = "0.1.1"
+description = "Mycelium local-first Context Layer — Core HTTP API and MCP bridge"
+readme = "README.md"
+license = { text = "MIT" }
 requires-python = ">=3.12"
+authors = [{ name = "Mycelium contributors" }]
+keywords = ["mycelium", "rag", "mcp", "local-first", "context"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development",
+]
 dependencies = [
   "fastapi>=0.115.0",
   "uvicorn[standard]>=0.32.0",
   "pydantic>=2.0.0",
   "httpx>=0.27.0",
   "watchdog>=4.0.0",
+  "sentence-transformers>=3.0.0",
+  "mcp>=1.0.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/mycelium-dev/mycelium"
+Documentation = "https://github.com/mycelium-dev/mycelium#readme"
+Repository = "https://github.com/mycelium-dev/mycelium"
+Changelog = "https://github.com/mycelium-dev/mycelium/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0.0"]
+
+[project.scripts]
+mycelium = "mycelium.cli:main"
+mycelium-core = "mycelium.cli:core_main"
+mycelium-mcp = "mycelium.bridges.mcp.server:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

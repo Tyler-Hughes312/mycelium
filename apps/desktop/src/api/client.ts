@@ -40,6 +40,8 @@ export type QueryResult = {
   family?: "Symbol" | "Commit" | "File" | "Note" | string;
   snippet: string;
   path: string;
+  start_line?: number | null;
+  end_line?: number | null;
   meta?: { icon: string; text: string }[];
   score: number;
   provenance?: Record<string, unknown>;
@@ -62,6 +64,10 @@ export type HealthResponse = {
     backend?: string;
     model_id?: string;
     configured_model?: string;
+  };
+  watchers?: {
+    available?: boolean;
+    workspaces?: number;
   };
 };
 
@@ -158,6 +164,7 @@ export type IndexStatus = {
   phase?: string;
   progress?: number;
   message?: string;
+  embedding_notice?: string;
   commits_indexed?: number;
   commits_total?: number;
   files_indexed?: number;

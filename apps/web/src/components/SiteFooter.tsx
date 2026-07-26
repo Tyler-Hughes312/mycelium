@@ -47,12 +47,22 @@ export function SiteFooter() {
             </li>
             <li>
               <a
-                href={LINKS.releases}
+                href={LINKS.desktopDownload}
                 target="_blank"
                 rel="noreferrer"
                 className={footerLink}
               >
                 Download
+              </a>
+            </li>
+            <li>
+              <a
+                href={LINKS.releases}
+                target="_blank"
+                rel="noreferrer"
+                className={footerLink}
+              >
+                Releases
               </a>
             </li>
             <li>

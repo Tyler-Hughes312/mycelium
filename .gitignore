@@ -41,12 +41,27 @@ Thumbs.db
 *.swo
 .idea/
 *.local
+.cursor/
 
 # Mycelium local runtime (lives in ~/.mycelium by default; ignore if ever nested)
 .mycelium/
+.mycelium-eval/
+
+# Nested git for dogfood fixture (rebuilt by prepare_dogfood.sh)
+fixtures/**/.git/
 
 # Logs & temp
 *.log
 tmp/
 temp/
 .cache/
+
+# Packaged extensions
+*.vsix
+
+# Desktop packaging artifacts
+apps/desktop/src-tauri/resources/mycelium-core/
+services/core/packaging/dist/
+services/core/packaging/build/
+services/core/packaging/*.toc
+fixtures/dogfood-rate-limits/

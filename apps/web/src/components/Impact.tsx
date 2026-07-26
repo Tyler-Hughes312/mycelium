@@ -5,16 +5,8 @@ export function Impact() {
     <section
       id="impact"
       data-chapter="impact"
-      className="relative overflow-hidden bg-[var(--color-bg)] px-6 py-28"
+      className="relative overflow-hidden px-6 py-28"
     >
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse at 20% 10%, rgba(0, 209, 178, 0.14), transparent 50%), radial-gradient(ellipse at 85% 60%, rgba(123, 108, 246, 0.1), transparent 45%)",
-        }}
-      />
       <div className="relative z-10 mx-auto max-w-5xl">
         <p className="font-display text-sm font-medium uppercase tracking-[0.2em] text-[var(--color-teal)]">
           {IMPACT_INTRO.eyebrow}
@@ -28,7 +20,10 @@ export function Impact() {
 
         <ul className="mt-14 grid gap-8 sm:grid-cols-2">
           {IMPACT_METRICS.map((metric) => (
-            <li key={metric.id} className="border-t border-white/10 pt-6">
+            <li
+              key={metric.id}
+              className="rounded-xl border border-white/10 bg-[var(--color-surface)] px-6 py-6"
+            >
               <p className="font-display text-4xl font-semibold tracking-tight text-[var(--color-teal)] sm:text-5xl">
                 {metric.stat}
               </p>

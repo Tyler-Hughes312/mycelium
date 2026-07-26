@@ -52,7 +52,8 @@ export function ImpactPage() {
   }, [range, refresh]);
 
   return (
-    <div className="flex flex-col gap-lg max-w-4xl">
+    <main className="h-full overflow-y-auto p-xl bg-surface">
+      <div className="max-w-4xl mx-auto flex flex-col gap-lg">
       <header className="space-y-xs">
         <h1 className="font-display text-[28px] text-on-surface tracking-tight">
           Impact
@@ -196,6 +197,7 @@ export function ImpactPage() {
           </ul>
         )}
       </section>
-    </div>
+      </div>
+    </main>
   );
 }

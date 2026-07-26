@@ -1,32 +1,45 @@
-# React + TypeScript + Vite
+# Mycelium Desktop
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Local Vite + React console for the Mycelium Context Layer (Library, Index, Search, Vault, Settings).
 
-Currently, two official plugins are available:
+Talks to Core at `http://127.0.0.1:8787`.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Packaged app (downloadable)
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+# From repo root (needs Rust via rustup + project venv)
+./scripts/package-desktop.sh
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Produces `.dmg` / `.app` (macOS) under `src-tauri/target/release/bundle/`.  
+Windows installers are built on `windows-latest` via `.github/workflows/release-desktop.yml`.
+
+End-user install: [docs/DESKTOP-INSTALL.md](../../docs/DESKTOP-INSTALL.md).
+
+## Development (web)
+
+```bash
+npm install
+npm run dev          # http://localhost:5173 — Core via Vite /api proxy
+```
+
+Core must be running (`./scripts/run-core.sh` or `./scripts/dev.sh`).
+
+## Native shell (Tauri)
+
+```bash
+./scripts/build-core-sidecar.sh   # once (or after Core changes)
+npm run tauri:dev                 # spawns bundled Core if port 8787 is free
+npm run tauri:build               # production bundle
+```
+
+## Scripts
+
+| Command | Purpose |
+|---|---|
+| `npm run dev` | Vite HMR |
+| `npm run build` | Typecheck + production bundle → `dist/` |
+| `npm run lint` | Oxlint |
+| `npm run preview` | Serve `dist/` |
+| `npm run tauri:dev` | Native window + Core sidecar lifecycle |
+| `npm run tauri:build` | Installable Desktop artifacts |
