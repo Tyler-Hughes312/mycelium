@@ -35,8 +35,7 @@ export function SiteNav() {
           <li>
             <a
               href={LINKS.desktopDownload}
-              target="_blank"
-              rel="noreferrer"
+              download={LINKS.desktopFilename}
               className={linkClass}
             >
               Download

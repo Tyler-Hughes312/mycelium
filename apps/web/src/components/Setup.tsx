@@ -40,8 +40,7 @@ export function Setup() {
         <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
           <a
             href={LINKS.desktopDownload}
-            target="_blank"
-            rel="noreferrer"
+            download={LINKS.desktopFilename}
             className="btn-primary"
           >
             Download Desktop

@@ -1,0 +1,3 @@
+# Built/fetched Desktop installer — not committed (see fetch-desktop-dmg.mjs)
+*.dmg
+!.gitkeep

@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "node scripts/fetch-desktop-dmg.mjs && tsc -b && vite build",
+    "predev": "node scripts/fetch-desktop-dmg.mjs",
     "preview": "vite preview",
     "test": "node --experimental-strip-types --test \"src/**/*.test.mjs\""
   },

@@ -1,15 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-test("CTA URLs point at Desktop 0.1.1 release assets", async () => {
+test("CTA Download is same-origin DMG (not GitHub navigation)", async () => {
   const { LINKS } = await import("./content.ts");
+  assert.equal(LINKS.desktopDownload, "/downloads/Mycelium_0.1.1_aarch64.dmg");
+  assert.equal(LINKS.desktopFilename, "Mycelium_0.1.1_aarch64.dmg");
   assert.equal(
     LINKS.releases,
     "https://github.com/Tyler-Hughes312/mycelium/releases/tag/v0.1.1-desktop",
-  );
-  assert.equal(
-    LINKS.desktopDownload,
-    "https://github.com/Tyler-Hughes312/mycelium/releases/download/v0.1.1-desktop/Mycelium_0.1.1_aarch64.dmg",
   );
   assert.equal(LINKS.github, "https://github.com/Tyler-Hughes312/mycelium");
   assert.equal(LINKS.desktopInstallDoc, "https://github.com/Tyler-Hughes312/mycelium/blob/main/docs/DESKTOP-INSTALL.md");

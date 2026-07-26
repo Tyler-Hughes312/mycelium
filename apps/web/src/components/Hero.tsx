@@ -44,8 +44,7 @@ export function Hero() {
         <div data-hero-animate className="mt-1 flex flex-col gap-3 sm:flex-row">
           <a
             href={LINKS.desktopDownload}
-            target="_blank"
-            rel="noreferrer"
+            download={LINKS.desktopFilename}
             className="btn-primary"
           >
             {HERO.primaryCta}

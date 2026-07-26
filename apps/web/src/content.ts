@@ -1,9 +1,12 @@
 export const LINKS = {
-  /** Latest Desktop release page (0.1.1). */
+  /** Release notes / other platforms. */
   releases: "https://github.com/Tyler-Hughes312/mycelium/releases/tag/v0.1.1-desktop",
-  /** Direct macOS Apple Silicon DMG for Download CTAs. */
-  desktopDownload:
-    "https://github.com/Tyler-Hughes312/mycelium/releases/download/v0.1.1-desktop/Mycelium_0.1.1_aarch64.dmg",
+  /**
+   * Same-origin Desktop DMG — fetched into public/downloads at build time
+   * so Download CTAs save the file instead of opening GitHub.
+   */
+  desktopDownload: "/downloads/Mycelium_0.1.1_aarch64.dmg",
+  desktopFilename: "Mycelium_0.1.1_aarch64.dmg",
   github: "https://github.com/Tyler-Hughes312/mycelium",
   desktopInstallDoc:
     "https://github.com/Tyler-Hughes312/mycelium/blob/main/docs/DESKTOP-INSTALL.md",
