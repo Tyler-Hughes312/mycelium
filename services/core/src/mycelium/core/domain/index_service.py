@@ -13,6 +13,7 @@ from mycelium.adapters.git.history import GitError, read_commit_history
 from mycelium.adapters.parse.symbols import SymbolRecord, extract_symbols
 from mycelium.adapters.store.commit_store import JsonCommitStore
 from mycelium.adapters.store.edge_store import JsonEdgeStore
+from mycelium.adapters.store.json_io import atomic_write_json, read_json_object
 from mycelium.adapters.store.symbol_store import JsonSymbolStore
 from mycelium.adapters.store.vector_store import JsonVectorStore
 from mycelium.adapters.store.workspace_repo import JsonFileWorkspaceRepo, WorkspaceError
@@ -97,17 +98,11 @@ class IndexService:
         path = self._status_path(workspace_id)
         if not path.exists():
             return None
-        import json
-
-        return json.loads(path.read_text(encoding="utf-8"))
+        raw = read_json_object(path, default=None)
+        return raw if isinstance(raw, dict) else None
 
     def _write_status(self, workspace_id: str, payload: dict[str, Any]) -> None:
-        import json
-
-        self._status_path(workspace_id).write_text(
-            json.dumps(payload, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
+        atomic_write_json(self._status_path(workspace_id), payload)
 
     def is_running(self, workspace_id: str) -> bool:
         with self._lock:

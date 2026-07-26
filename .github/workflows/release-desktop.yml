@@ -44,7 +44,9 @@ jobs:
 
       - name: Install Desktop deps
         working-directory: apps/desktop
-        run: npm ci
+        run: |
+          (cd ../../packages/ui && npm install)
+          npm ci
 
       - uses: dtolnay/rust-toolchain@stable
 

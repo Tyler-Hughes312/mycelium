@@ -59,7 +59,7 @@ export function ResultRow({
       </p>
       {meta.length > 0 && (
         <div className="flex items-center gap-3 mt-2 min-w-0 overflow-hidden">
-          {meta.map((m) => (
+          {meta.map((m: { icon: string; text: string }) => (
             <span
               key={`${m.icon}-${m.text}`}
               title={m.text}
