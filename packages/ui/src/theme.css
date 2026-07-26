@@ -1,0 +1,24 @@
+/* Mycelium Soft Electric theme tokens (shared) */
+:root {
+  --mycelium-surface: #111417;
+  --mycelium-surface-raised: #161b20;
+  --mycelium-surface-overlay: #1c2329;
+  --mycelium-background: #111417;
+  --mycelium-foreground: #e7ecef;
+  --mycelium-muted: #8b979f;
+  --mycelium-border: #2a333b;
+  --mycelium-primary: #2dd4bf;
+  --mycelium-secondary: #e5c276;
+  --mycelium-accent-hypha: #6ec8ff;
+  --mycelium-accent-spore: #e5c276;
+  --mycelium-accent-muted: #3a7fa8;
+  --mycelium-accent-dim: #1a3a4d;
+  --mycelium-danger: #c45c5c;
+  --mycelium-spacing-xs: 4px;
+  --mycelium-spacing-sm: 8px;
+  --mycelium-spacing-md: 12px;
+  --mycelium-spacing-lg: 16px;
+  --mycelium-spacing-xl: 24px;
+  --mycelium-font-sans: "IBM Plex Sans", sans-serif;
+  --mycelium-font-mono: "IBM Plex Mono", monospace;
+}

@@ -1,0 +1,187 @@
+@import "tailwindcss";
+@import "@mycelium/ui/theme.css";
+
+@theme {
+  /* Colors — Soft Electric */
+  --color-tertiary-fixed: #ffdad7;
+  --color-on-secondary: #3f2e00;
+  --color-tertiary-container: #c1807d;
+  --color-outline-variant: #404944;
+  --color-on-error: #690005;
+  --color-inverse-primary: #3a7fa8;
+  --color-surface-container-low: #191c1f;
+  --color-border: #2a333b;
+  --color-surface-dim: #111417;
+  --color-surface-raised: #161b20;
+  --color-on-error-container: #ffdad6;
+  --color-on-primary-fixed: #001018;
+  --color-secondary-fixed: #ffdf9c;
+  --color-on-tertiary-fixed: #360e0e;
+  --color-inverse-surface: #e1e2e7;
+  --color-on-surface: #e1e2e7;
+  --color-surface: #111417;
+  --color-on-secondary-container: #d6b469;
+  --color-tertiary: #fdb4b0;
+  --color-on-tertiary-container: #481c1b;
+  --color-on-tertiary-fixed-variant: #6b3836;
+  --color-on-primary: #001018;
+  --color-primary: #6ec8ff;
+  --color-surface-container-highest: #323538;
+  --color-surface-bright: #37393d;
+  --color-background: #111417;
+  --color-error-container: #93000a;
+  --color-on-tertiary: #502221;
+  --color-inverse-on-surface: #2e3134;
+  --color-surface-overlay: #1c2329;
+  --color-tertiary-fixed-dim: #fdb4b0;
+  --color-surface-container-high: #272a2e;
+  --color-surface-tint: #6ec8ff;
+  --color-surface-container-lowest: #0b0e11;
+  --color-surface-container: #1d2023;
+  --color-primary-fixed-dim: #6ec8ff;
+  --color-on-primary-fixed-variant: #1a3a4d;
+  --color-outline: #8a938d;
+  --color-on-background: #e1e2e7;
+  --color-secondary-container: #5d4502;
+  --color-on-secondary-fixed: #251a00;
+  --color-foreground: #e7ecef;
+  --color-muted: #8b979f;
+  --color-error: #ffb4ab;
+  --color-danger: #c45c5c;
+  --color-primary-fixed: #a8deff;
+  --color-surface-variant: #323538;
+  --color-primary-container: #3a7fa8;
+  --color-on-primary-container: #e7ecef;
+  --color-secondary: #e5c276;
+  --color-secondary-fixed-dim: #e5c276;
+  --color-on-secondary-fixed-variant: #5b4300;
+  --color-accent-hypha: #6ec8ff;
+  --color-accent-spore: #e5c276;
+  --color-accent-dim: #1a3a4d;
+  --color-accent-muted: #3a7fa8;
+  --color-on-surface-variant: #8b979f;
+
+  /* Radius */
+  --radius-DEFAULT: 0.5rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.625rem;
+  --radius-full: 9999px;
+
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+  --spacing-xxl: 32px;
+  --spacing-unit: 4px;
+  --spacing-gutter: 12px;
+  --spacing-margin: 16px;
+
+  /* Font families */
+  --font-technical-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --font-technical-mono-sm: "IBM Plex Mono", ui-monospace, monospace;
+  --font-body-sm: "IBM Plex Sans", ui-sans-serif, sans-serif;
+  --font-body-md: "IBM Plex Sans", ui-sans-serif, sans-serif;
+  --font-label-caps: "IBM Plex Sans", ui-sans-serif, sans-serif;
+  --font-label-md: "IBM Plex Sans", ui-sans-serif, sans-serif;
+  --font-headline-lg: "IBM Plex Sans", ui-sans-serif, sans-serif;
+  --font-headline-md: "IBM Plex Sans", ui-sans-serif, sans-serif;
+  --font-headline-lg-mobile: "IBM Plex Sans", ui-sans-serif, sans-serif;
+  --font-sans: "IBM Plex Sans", ui-sans-serif, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  /* Font sizes */
+  --text-technical-mono: 12px;
+  --text-technical-mono--line-height: 16px;
+  --text-body-sm: 13px;
+  --text-body-sm--line-height: 18px;
+  --text-label-caps: 11px;
+  --text-label-caps--line-height: 16px;
+  --text-label-caps--letter-spacing: 0.05em;
+  --text-headline-lg: 28px;
+  --text-headline-lg--line-height: 36px;
+  --text-headline-lg--letter-spacing: -0.01em;
+  --text-label-md: 12px;
+  --text-label-md--line-height: 16px;
+  --text-label-md--letter-spacing: 0.02em;
+  --text-body-md: 14px;
+  --text-body-md--line-height: 20px;
+  --text-headline-md: 20px;
+  --text-headline-md--line-height: 28px;
+  --text-technical-mono-sm: 11px;
+  --text-technical-mono-sm--line-height: 14px;
+  --text-headline-lg-mobile: 24px;
+  --text-headline-lg-mobile--line-height: 32px;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background-color: #111417;
+    color: #e1e2e7;
+    font-family: "IBM Plex Sans", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .material-symbols-outlined {
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+    user-select: none;
+  }
+
+  .fill-icon,
+  .symbol-fill {
+    font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 24;
+  }
+
+  .note-link {
+    color: #2dd4bf;
+    text-decoration: underline;
+    text-decoration-color: #2a333b;
+    text-underline-offset: 2px;
+    cursor: pointer;
+  }
+
+  .note-link:hover {
+    text-decoration-color: #6ec8ff;
+  }
+
+  .hypha-connector::before {
+    content: "";
+    position: absolute;
+    left: 6px;
+    top: 16px;
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+    background: #2a333b;
+    border: 1px solid #404944;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #2a333b;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #404944;
+  }
+}

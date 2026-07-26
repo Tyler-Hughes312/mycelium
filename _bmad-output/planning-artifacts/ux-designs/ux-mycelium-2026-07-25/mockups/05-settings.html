@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Settings - Mycelium</title>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                "tertiary-fixed": "#ffdad7",
+                "on-secondary": "#3f2e00",
+                "tertiary-container": "#c1807d",
+                "outline-variant": "#404944",
+                "on-error": "#690005",
+                "inverse-primary": "#346855",
+                "surface-container-low": "#191c1f",
+                "border": "#2A333B",
+                "surface-dim": "#111417",
+                "surface-raised": "#161B20",
+                "on-error-container": "#ffdad6",
+                "on-primary-fixed": "#002116",
+                "secondary-fixed": "#ffdf9c",
+                "on-tertiary-fixed": "#360e0e",
+                "inverse-surface": "#e1e2e7",
+                "on-surface": "#e1e2e7",
+                "surface": "#111417",
+                "on-secondary-container": "#d6b469",
+                "tertiary": "#fdb4b0",
+                "on-tertiary-container": "#481c1b",
+                "on-tertiary-fixed-variant": "#6b3836",
+                "on-primary": "#003828",
+                "primary": "#9cd2ba",
+                "surface-container-highest": "#323538",
+                "surface-bright": "#37393d",
+                "background": "#111417",
+                "error-container": "#93000a",
+                "on-tertiary": "#502221",
+                "inverse-on-surface": "#2e3134",
+                "surface-overlay": "#1C2329",
+                "tertiary-fixed-dim": "#fdb4b0",
+                "surface-container-high": "#272a2e",
+                "surface-tint": "#9cd2ba",
+                "surface-container-lowest": "#0b0e11",
+                "surface-container": "#1d2023",
+                "primary-fixed-dim": "#9cd2ba",
+                "on-primary-fixed-variant": "#1a503e",
+                "outline": "#8a938d",
+                "on-background": "#e1e2e7",
+                "secondary-container": "#5d4502",
+                "on-secondary-fixed": "#251a00",
+                "foreground": "#E7ECEF",
+                "muted": "#8B979F",
+                "error": "#ffb4ab",
+                "danger": "#C45C5C",
+                "primary-fixed": "#b7eed6",
+                "surface-variant": "#323538",
+                "primary-container": "#679b86",
+                "on-surface-variant": "#c0c9c3",
+                "secondary": "#e5c276",
+                "on-primary-container": "#003123",
+                "secondary-fixed-dim": "#e5c276",
+                "on-secondary-fixed-variant": "#5b4300",
+                "accent-hypha": "#5B8F7A",
+                "accent-spore": "#9cd2ba"
+              },
+              "borderRadius": {
+                "DEFAULT": "0.125rem",
+                "lg": "0.25rem",
+                "xl": "0.5rem",
+                "full": "0.75rem"
+              },
+              "spacing": {
+                "xs": "4px",
+                "margin": "16px",
+                "sm": "8px",
+                "lg": "16px",
+                "md": "12px",
+                "xl": "24px",
+                "xxl": "32px",
+                "gutter": "12px",
+                "unit": "4px"
+              },
+              "fontFamily": {
+                "technical-mono": ["IBM Plex Mono"],
+                "body-sm": ["IBM Plex Sans"],
+                "label-caps": ["IBM Plex Sans"],
+                "headline-lg": ["IBM Plex Sans"],
+                "label-md": ["IBM Plex Sans"],
+                "body-md": ["IBM Plex Sans"],
+                "headline-md": ["IBM Plex Sans"],
+                "technical-mono-sm": ["IBM Plex Mono"],
+                "headline-lg-mobile": ["IBM Plex Sans"]
+              },
+              "fontSize": {
+                "technical-mono": ["12px", {"lineHeight": "16px", "fontWeight": "400"}],
+                "body-sm": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                "label-caps": ["11px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                "headline-lg": ["28px", {"lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "500"}],
+                "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "500"}],
+                "technical-mono-sm": ["11px", {"lineHeight": "14px", "fontWeight": "400"}],
+                "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "500"}]
+              }
+            },
+          },
+        }
+    </script>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            background-color: #111417;
+            color: #E7ECEF;
+            font-family: 'IBM Plex Sans', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
+        }
+        /* Override default select and input styles to be strictly neutral */
+        select, input {
+            background-color: #1d2023 !important;
+            border-color: #2A333B !important;
+        }
+        select:focus, input:focus {
+            border-color: #8a938d !important;
+            --tw-ring-color: transparent !important;
+        }
+    </style>
+</head>
+<body class="bg-surface text-foreground font-body-md min-h-screen overflow-hidden selection:bg-surface-tint selection:text-surface">
+<!-- Shell Container -->
+<div class="flex h-screen w-full">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-full flex flex-col w-64 border-r border-border bg-surface-container-low z-50">
+<div class="flex items-center px-lg h-12 border-b border-border">
+<span class="font-headline-md text-headline-md font-bold text-primary">Mycelium</span>
+<span class="ml-auto font-technical-mono-sm text-technical-mono-sm text-on-surface-variant">v0.8.4-stable</span>
+</div>
+<nav class="flex-1 py-md overflow-y-auto">
+<ul class="space-y-xs">
+<li>
+<a class="flex items-center py-sm pl-4 pr-lg text-on-surface-variant hover:bg-surface-overlay hover:text-on-surface transition-colors duration-150 cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined mr-sm text-[18px]">book_2</span>
+<span class="font-label-md text-label-md">Library</span>
+</a>
+</li>
+<li>
+<a class="flex items-center py-sm pl-4 pr-lg text-on-surface-variant hover:bg-surface-overlay hover:text-on-surface transition-colors duration-150 cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined mr-sm text-[18px]">search</span>
+<span class="font-label-md text-label-md">Search</span>
+</a>
+</li>
+<li>
+<a class="flex items-center py-sm pl-4 pr-lg text-on-surface-variant hover:bg-surface-overlay hover:text-on-surface transition-colors duration-150 cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined mr-sm text-[18px]">database</span>
+<span class="font-label-md text-label-md">Vault</span>
+</a>
+</li>
+<li>
+<a class="flex items-center py-sm pl-3 pr-lg bg-surface-overlay text-primary font-bold border-l-2 border-primary cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined mr-sm text-[18px]" style="font-variation-settings: 'FILL' 1;">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+</li>
+</ul>
+</nav>
+<div class="mt-auto border-t border-border py-md">
+<ul class="space-y-xs">
+<li>
+<a class="flex items-center py-sm pl-4 pr-lg text-on-surface-variant hover:bg-surface-overlay hover:text-on-surface transition-colors duration-150 cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined mr-sm text-[18px]">description</span>
+<span class="font-label-md text-label-md">Docs</span>
+</a>
+</li>
+<li>
+<a class="flex items-center py-sm pl-4 pr-lg text-on-surface-variant hover:bg-surface-overlay hover:text-on-surface transition-colors duration-150 cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined mr-sm text-[18px]">pulse_alert</span>
+<span class="font-label-md text-label-md">Activity</span>
+</a>
+</li>
+</ul>
+<div class="px-lg pt-md mt-sm flex items-center">
+<div class="w-8 h-8 rounded-full bg-surface-overlay border border-border flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant">person</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 ml-64 flex flex-col h-full bg-surface relative">
+<!-- TopNavBar -->
+<header class="h-12 w-full border-b border-border bg-surface flex justify-between items-center px-lg z-40 sticky top-0">
+<div class="flex items-center gap-sm">
+<span class="font-headline-md text-headline-md text-on-surface">Console</span>
+</div>
+<div class="flex-1 max-w-md mx-xl relative">
+<span class="material-symbols-outlined absolute right-sm top-1/2 -translate-y-1/2 text-[16px] text-on-surface-variant pointer-events-none">search</span>
+<input class="w-full bg-surface-container border border-border rounded h-8 pl-sm pr-xl font-body-sm text-body-sm text-foreground focus:outline-none focus:border-outline transition-colors placeholder:text-on-surface-variant" placeholder="Search commands..." type="text"/>
+</div>
+<div class="flex items-center gap-md">
+<button class="text-on-surface-variant hover:text-primary transition-colors scale-95 active:scale-90 p-xs rounded hover:bg-surface-overlay flex items-center justify-center">
+<span class="material-symbols-outlined text-[18px]">hub</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors scale-95 active:scale-90 p-xs rounded hover:bg-surface-overlay flex items-center justify-center">
+<span class="material-symbols-outlined text-[18px]">signal_cellular_alt</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors scale-95 active:scale-90 p-xs rounded hover:bg-surface-overlay flex items-center justify-center">
+<span class="material-symbols-outlined text-[18px]">dns</span>
+</button>
+</div>
+</header>
+<!-- Scrollable Content -->
+<div class="flex-1 overflow-y-auto p-xl scroll-smooth">
+<div class="max-w-3xl mx-auto space-y-xl pb-xxl">
+<div class="mb-lg">
+<h1 class="font-headline-lg text-headline-lg text-foreground mb-xs">Local Environment Setup</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Configure core storage paths and embedded intelligence parameters.</p>
+</div>
+<!-- Trust Panel - Updated with DESIGN_SYSTEM_2 styles -->
+<section class="border border-border bg-surface-container-low rounded-DEFAULT p-lg flex items-start gap-md">
+<div class="mt-xs">
+<span class="material-symbols-outlined text-outline text-[24px]" style="font-variation-settings: 'FILL' 1;">lock</span>
+</div>
+<div>
+<h2 class="font-label-md text-label-md text-on-surface mb-xs flex items-center gap-xs">
+                                Stays on this machine
+                                <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+                                Mycelium operates entirely local-first. Your code, indices, and queries never leave this device by default. 
+                                The local Core handles all processing, and no account or cloud sync is required for full functionality.
+                            </p>
+</div>
+</section>
+<!-- Core Configuration -->
+<section class="space-y-lg">
+<h3 class="font-label-caps text-label-caps text-on-surface-variant border-b border-border pb-xs uppercase tracking-widest">Paths &amp; Storage</h3>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-md items-start">
+<div class="md:col-span-1 pt-sm">
+<label class="font-label-md text-label-md text-foreground block">Vault path</label>
+<span class="font-body-sm text-body-sm text-on-surface-variant block mt-xs">Root directory for semantic indices and metadata.</span>
+</div>
+<div class="md:col-span-3">
+<div class="flex gap-sm">
+<input class="flex-1 bg-surface-container border border-border rounded h-10 px-md font-technical-mono text-technical-mono text-primary focus:outline-none focus:border-outline transition-colors" type="text" value="~/mycelium-vault"/>
+<button class="px-md h-10 border border-border rounded bg-surface-container-high text-foreground font-label-md text-label-md hover:bg-surface-variant transition-colors flex items-center gap-xs">
+<span class="material-symbols-outlined text-[16px]">folder_open</span>
+                                        Browse
+                                    </button>
+</div>
+<div class="mt-sm flex items-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px]">info</span>
+<span class="font-technical-mono-sm text-technical-mono-sm">Space available: 124.5 GB on /dev/disk1s5</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Intelligence Configuration -->
+<section class="space-y-lg">
+<h3 class="font-label-caps text-label-caps text-on-surface-variant border-b border-border pb-xs uppercase tracking-widest">Local Indexing</h3>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-md items-start">
+<div class="md:col-span-1 pt-sm">
+<label class="font-label-md text-label-md text-foreground block">Embedding model</label>
+<span class="font-body-sm text-body-sm text-on-surface-variant block mt-xs">Model used for code and docs vectorization.</span>
+</div>
+<div class="md:col-span-3">
+<div class="relative">
+<select class="w-full bg-surface-container border border-border rounded h-10 px-md pr-xl font-technical-mono text-technical-mono text-foreground appearance-none focus:outline-none focus:border-outline transition-colors">
+<option selected="" value="jina-embeddings-v2-base-code">jina-embeddings-v2-base-code (8192 ctx)</option>
+<option value="nomic-embed-text-v1.5">nomic-embed-text-v1.5 (8192 ctx)</option>
+<option value="bge-small-en-v1.5">bge-small-en-v1.5 (512 ctx)</option>
+</select>
+<span class="material-symbols-outlined absolute right-md top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[18px]">expand_more</span>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-md items-start pt-md">
+<div class="md:col-span-1 pt-sm">
+<label class="font-label-md text-label-md text-foreground block">Git history depth</label>
+<span class="font-body-sm text-body-sm text-on-surface-variant block mt-xs">Commits to parse per repository for context.</span>
+</div>
+<div class="md:col-span-3">
+<div class="flex items-center gap-sm">
+<input class="w-24 bg-surface-container border border-border rounded h-10 px-sm font-technical-mono text-technical-mono text-foreground text-center focus:outline-none focus:border-outline transition-colors" type="number" value="500"/>
+<span class="font-body-sm text-body-sm text-on-surface-variant">commits</span>
+</div>
+</div>
+</div>
+<div class="flex justify-end pt-lg">
+<button class="px-xl h-10 rounded bg-primary text-on-primary-fixed font-label-md text-label-md hover:bg-opacity-90 transition-opacity flex items-center gap-sm">
+<span class="material-symbols-outlined text-[18px]">save</span>
+                                Apply Changes
+                            </button>
+</div>
+</section>
+</div>
+</div>
+</main>
+</div>
+</body></html>

@@ -1,0 +1,118 @@
+<!-- Mock Main Editor Area -->
+<main class="flex-1 bg-background flex flex-col min-w-0">
+<!-- Top Nav (TopNavBar) -->
+<header class="bg-surface border-b border-border h-12 flex items-center justify-between px-lg z-40 shrink-0">
+<div class="flex items-center gap-4">
+<span class="font-headline-md text-headline-md text-on-surface">Mycelium</span>
+<span class="text-muted font-body-md text-body-md">/src/auth/session.ts</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-muted" style="font-variation-settings: 'FILL' 0;">hub</span>
+<span class="material-symbols-outlined text-muted" style="font-variation-settings: 'FILL' 0;">terminal</span>
+</div>
+</div>
+</header>
+<!-- Editor Content -->
+<div class="flex-1 overflow-auto p-xl custom-scrollbar relative">
+<pre class="font-technical-mono text-technical-mono text-muted"><span class="text-primary">import</span> { Session } <span class="text-primary">from</span> <span class="text-secondary">'@/types/auth'</span>;
+
+<span class="text-primary">export async function</span> <span class="text-foreground">authenticate</span>(req: Request): Promise&lt;Session | null&gt; {
+    <span class="text-outline-variant">// Validate session token</span>
+    <span class="text-primary">const</span> token = req.headers.get(<span class="text-secondary">'authorization'</span>);
+    
+    <span class="text-primary">if</span> (!token) {
+        <span class="text-primary">return</span> null;
+    }
+
+    <span class="text-primary">try</span> {
+        <span class="text-outline-variant">// verify signature against local key store</span>
+        <span class="text-primary">const</span> decoded = <span class="text-primary">await</span> crypto.verify(token, localKeys.public);
+        <span class="text-primary">return</span> decoded <span class="text-primary">as</span> Session;
+    } <span class="text-primary">catch</span> (err) {
+        console.error(<span class="text-secondary">'Auth failed:'</span>, err);
+        <span class="text-primary">return</span> null;
+    }
+}
+            </pre>
+</div>
+</main>
+<!-- Mycelium Right Sidebar -->
+<aside class="w-[340px] bg-surface-container-low border-l border-border flex flex-col shrink-0 h-full">
+<!-- Sidebar Header / Status -->
+<div class="p-lg border-b border-border shrink-0 flex flex-col gap-sm">
+<div class="flex items-center justify-between">
+<h2 class="font-label-caps text-label-caps text-muted uppercase tracking-wider">Mycelium Context</h2>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(156,210,186,0.4)]"></span>
+<span class="font-technical-mono-sm text-technical-mono-sm text-primary">Core · Connected</span>
+</div>
+</div>
+<div class="flex items-center gap-xs text-muted">
+<span class="material-symbols-outlined text-[14px]">lock</span>
+<span class="font-technical-mono-sm text-technical-mono-sm">Local only</span>
+</div>
+</div>
+<!-- Current Focus Header -->
+<div class="p-lg border-b border-border shrink-0 bg-surface-container">
+<div class="text-muted font-technical-mono-sm text-technical-mono-sm mb-xs uppercase">Current Focus</div>
+<div class="font-body-md text-body-md text-foreground break-all">src/auth/session.ts</div>
+<div class="font-technical-mono text-technical-mono text-secondary mt-1">authenticate()</div>
+</div>
+<!-- Focus Context List (Ranked Results) -->
+<div class="flex-1 overflow-y-auto custom-scrollbar p-sm flex flex-col gap-sm relative">
+<!-- Connection Line Background (Subtle) -->
+<div class="absolute left-6 top-4 bottom-4 w-px bg-border/40 z-0 border-l border-dashed"></div>
+<!-- Result 1 -->
+<div class="relative z-10 bg-surface-container-lowest p-md rounded border border-transparent hover:border-border hover:bg-surface-container transition-colors group">
+<div class="flex items-center gap-sm mb-2">
+<span class="bg-surface-variant/30 border border-border rounded px-2 py-0.5 font-label-md text-label-md text-on-surface">Commit</span>
+<span class="font-technical-mono-sm text-technical-mono-sm text-muted">2 hours ago</span>
+</div>
+<div class="font-body-sm text-body-sm text-foreground mb-1">Fixed edge case where expired tokens returned invalid session type instead of null.</div>
+<div class="font-technical-mono-sm text-technical-mono-sm text-muted truncate">auth/session.ts</div>
+</div>
+<!-- Result 2 -->
+<div class="relative z-10 bg-surface-container-lowest p-md rounded border border-transparent hover:border-border hover:bg-surface-container transition-colors group">
+<div class="flex items-center gap-sm mb-2">
+<span class="bg-surface-variant/30 border border-border rounded px-2 py-0.5 font-label-md text-label-md text-on-surface">Note</span>
+<span class="font-technical-mono-sm text-technical-mono-sm text-muted">Yesterday</span>
+</div>
+<div class="font-body-sm text-body-sm text-foreground mb-1">Architecture Decision: We are moving all session validation to edge workers. Local fallback required.</div>
+<div class="font-technical-mono-sm text-technical-mono-sm text-muted truncate">docs/arch/auth-flow.md</div>
+</div>
+<!-- Result 3 -->
+<div class="relative z-10 bg-surface-container-lowest p-md rounded border border-transparent hover:border-border hover:bg-surface-container transition-colors group">
+<div class="flex items-center gap-sm mb-2">
+<span class="bg-surface-variant/30 border border-border rounded px-2 py-0.5 font-label-md text-label-md text-on-surface">Symbol</span>
+</div>
+<div class="font-technical-mono text-technical-mono text-foreground mb-1">verifySessionToken()</div>
+<div class="font-body-sm text-body-sm text-muted mb-1">Similar validation pattern used in middleware.</div>
+<div class="font-technical-mono-sm text-technical-mono-sm text-muted truncate">src/middleware/auth.ts</div>
+</div>
+<!-- Result 4 -->
+<div class="relative z-10 bg-surface-container-lowest p-md rounded border border-transparent hover:border-border hover:bg-surface-container transition-colors group">
+<div class="flex items-center gap-sm mb-2">
+<span class="bg-surface-variant/30 border border-border rounded px-2 py-0.5 font-label-md text-label-md text-on-surface">File</span>
+</div>
+<div class="font-body-sm text-body-sm text-foreground mb-1">Contains the <span class="font-technical-mono text-technical-mono">Session</span> type definition referenced here.</div>
+<div class="font-technical-mono-sm text-technical-mono-sm text-muted truncate">types/auth.d.ts</div>
+</div>
+<!-- Result 5 -->
+<div class="relative z-10 bg-surface-container-lowest p-md rounded border border-transparent hover:border-border hover:bg-surface-container transition-colors group">
+<div class="flex items-center gap-sm mb-2">
+<span class="bg-surface-variant/30 border border-border rounded px-2 py-0.5 font-label-md text-label-md text-on-surface">Commit</span>
+<span class="font-technical-mono-sm text-technical-mono-sm text-muted">last week</span>
+</div>
+<div class="font-body-sm text-body-sm text-foreground mb-1">Initial implementation of local-only auth fallback mechanism.</div>
+<div class="font-technical-mono-sm text-technical-mono-sm text-muted truncate">src/auth/local.ts</div>
+</div>
+</div>
+<!-- CTA Footer -->
+<div class="p-lg border-t border-border shrink-0 bg-surface-container-low">
+<button class="w-full bg-primary text-on-primary font-label-md text-label-md py-sm px-md rounded flex items-center justify-center gap-2 hover:bg-primary-container hover:text-on-primary-container transition-colors active:scale-[0.98]">
+<span class="material-symbols-outlined text-[18px]">edit_document</span>
+                New note
+            </button>
+</div>
+</aside>

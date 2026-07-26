@@ -1,0 +1,215 @@
+<!-- SideNavBar (Shared Component) -->
+<nav class="bg-surface-container-lowest dark:bg-surface-container-lowest fixed left-0 top-0 h-full w-[64px] lg:w-[200px] border-r border-border flex flex-col py-4 z-50">
+<!-- Header -->
+<div class="px-4 mb-8 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-container-high border border-border flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-primary text-[18px]">account_tree</span>
+</div>
+<div class="hidden lg:block overflow-hidden">
+<h1 class="font-headline-md text-headline-md font-bold text-primary dark:text-primary tracking-tight truncate">Mycelium</h1>
+<p class="font-technical-mono-sm text-technical-mono-sm text-muted truncate">Local Index Active</p>
+</div>
+</div>
+<!-- Main Navigation -->
+<div class="flex-1 flex flex-col gap-1 px-2 overflow-y-auto">
+<!-- Library -->
+<a class="text-muted dark:text-muted flex items-center gap-3 px-3 py-2 rounded hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors duration-150 group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-on-surface transition-colors">folder_open</span>
+<span class="hidden lg:block font-body-sm text-body-sm">Library</span>
+</a>
+<!-- Search -->
+<a class="text-muted dark:text-muted flex items-center gap-3 px-3 py-2 rounded hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors duration-150 group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-on-surface transition-colors">search</span>
+<span class="hidden lg:block font-body-sm text-body-sm">Search</span>
+</a>
+<!-- Vault (Active) -->
+<a class="text-primary dark:text-primary bg-surface-container-highest flex items-center gap-3 px-3 py-2 border-l-2 border-primary rounded-r opacity-90 transition-all duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">terminal</span>
+<span class="hidden lg:block font-body-md text-body-md font-medium">Vault</span>
+</a>
+<!-- Settings -->
+<a class="text-muted dark:text-muted flex items-center gap-3 px-3 py-2 rounded hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors duration-150 group mt-auto" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-on-surface transition-colors">settings</span>
+<span class="hidden lg:block font-body-sm text-body-sm">Settings</span>
+</a>
+</div>
+<!-- Footer Actions -->
+<div class="px-2 pt-4 border-t border-border flex flex-col gap-1 mt-4">
+<button class="text-muted dark:text-muted flex items-center gap-3 px-3 py-2 rounded hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors duration-150 group w-full text-left">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">cloud_done</span>
+<span class="hidden lg:block font-technical-mono-sm text-technical-mono-sm">Sync Status</span>
+</button>
+<button class="text-muted dark:text-muted flex items-center gap-3 px-3 py-2 rounded hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors duration-150 group w-full text-left">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">downloading</span>
+<span class="hidden lg:block font-technical-mono-sm text-technical-mono-sm">Updates</span>
+</button>
+</div>
+</nav>
+<!-- Main Layout Workspace -->
+<main class="ml-[64px] lg:ml-[200px] flex-1 flex h-full w-[calc(100%-64px)] lg:w-[calc(100%-200px)] bg-surface">
+<!-- Column 1: Note List (Narrow, Left) -->
+<div class="w-64 border-r border-border bg-surface-container-lowest flex flex-col h-full shrink-0 hidden md:flex z-30">
+<div class="h-12 border-b border-border flex items-center justify-between px-4 bg-surface-dim sticky top-0">
+<span class="font-label-caps text-label-caps text-muted uppercase tracking-wider">Vault Notes</span>
+<button class="text-muted hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">add</span>
+</button>
+</div>
+<div class="flex-1 overflow-y-auto p-2 flex flex-col gap-1">
+<!-- Search Input -->
+<div class="relative mb-2">
+<span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-muted text-[16px]">search</span>
+<input class="w-full bg-surface-container border border-border rounded pl-8 pr-2 py-1.5 font-body-sm text-body-sm text-on-surface focus:outline-none focus:border-outline-variant placeholder-muted/50 transition-colors" placeholder="Filter vault..." type="text"/>
+</div>
+<!-- List Items -->
+<button class="w-full text-left px-3 py-2 rounded hover:bg-surface-container-high transition-colors flex flex-col gap-1 group">
+<span class="font-body-sm text-body-sm text-on-surface group-hover:text-primary transition-colors truncate">API Design</span>
+<span class="font-technical-mono-sm text-technical-mono-sm text-muted truncate">~/mycelium-vault/api...</span>
+</button>
+<button class="w-full text-left px-3 py-2 rounded bg-surface-container-highest border-l-2 border-accent-hypha flex flex-col gap-1">
+<span class="font-body-md text-body-md text-primary font-medium truncate">Rate limit retries — decision</span>
+<span class="font-technical-mono-sm text-technical-mono-sm text-muted truncate">~/mycelium-vault/rate...</span>
+</button>
+<button class="w-full text-left px-3 py-2 rounded hover:bg-surface-container-high transition-colors flex flex-col gap-1 group">
+<span class="font-body-sm text-body-sm text-on-surface group-hover:text-primary transition-colors truncate">Auth flow</span>
+<span class="font-technical-mono-sm text-technical-mono-sm text-muted truncate">~/mycelium-vault/auth...</span>
+</button>
+<button class="w-full text-left px-3 py-2 rounded hover:bg-surface-container-high transition-colors flex flex-col gap-1 group">
+<span class="font-body-sm text-body-sm text-on-surface group-hover:text-primary transition-colors truncate">Database schema</span>
+<span class="font-technical-mono-sm text-technical-mono-sm text-muted truncate">~/mycelium-vault/db...</span>
+</button>
+</div>
+</div>
+<!-- Column 2: Markdown Editor (Center, Wide) -->
+<div class="flex-1 bg-surface flex flex-col h-full min-w-0 z-20 relative">
+<!-- TopAppBar context for the editor -->
+<div class="h-12 border-b border-border flex items-center justify-between px-6 bg-surface-dim sticky top-0 shrink-0">
+<div class="flex items-center gap-4 min-w-0">
+<button class="md:hidden text-muted hover:text-primary">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<div class="flex items-center gap-2 text-muted font-technical-mono-sm text-technical-mono-sm truncate">
+<span>Vault</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span class="text-on-surface">rate-limits.md</span>
+</div>
+</div>
+<div class="flex items-center gap-3 shrink-0">
+<span class="bg-surface-container-high border border-border px-2 py-0.5 rounded font-technical-mono-sm text-technical-mono-sm text-muted flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-accent-hypha"></span> Saved
+                    </span>
+<button class="text-muted hover:text-primary transition-colors" title="View History">
+<span class="material-symbols-outlined text-[20px]">history</span>
+</button>
+<button class="text-muted hover:text-primary transition-colors xl:hidden" title="Toggle Backlinks">
+<span class="material-symbols-outlined text-[20px]">link</span>
+</button>
+</div>
+</div>
+<!-- Editor Content Area -->
+<div class="flex-1 overflow-y-auto p-6 md:p-12 lg:px-24 xl:px-32 relative">
+<!-- Document Header -->
+<div class="max-w-3xl mx-auto relative z-10">
+<div class="mb-10">
+<h1 class="font-headline-lg text-headline-lg text-on-surface font-bold tracking-tight mb-3 outline-none" contenteditable="true">
+                            Rate limit retries — decision
+                        </h1>
+<div class="flex items-center gap-4 text-muted border-b border-border pb-4">
+<div class="font-technical-mono text-technical-mono flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">folder</span>
+                                ~/mycelium-vault/rate-limits.md
+                            </div>
+<div class="font-technical-mono-sm text-technical-mono-sm bg-surface-container px-2 py-0.5 rounded border border-border">
+                                Last modified: 2h ago
+                            </div>
+</div>
+</div>
+<!-- Document Body (Markdown rendered) -->
+<div class="prose prose-invert prose-p:font-body-md prose-p:text-body-md prose-p:leading-relaxed text-on-surface-variant outline-none min-h-[500px]" contenteditable="true">
+<p class="mb-6">
+                            After reviewing the <span class="note-link">[[authenticate]]</span> module, we decided to implement a jittered backoff. This ensures that <span class="note-link">[[rate-limiting]]</span> doesn't cause thundering herd issues during recovery.
+                        </p>
+<h3 class="font-headline-md text-headline-md font-medium text-on-surface mt-8 mb-4">Context</h3>
+<p class="mb-6">
+                            Initial testing revealed that during regional outages, client SDKs were aggressively polling the endpoint without variance in their sleep cycles. This created significant spikes in load precisely when the cluster was attempting to re-establish quorum.
+                        </p>
+<div class="bg-surface-container-low border border-border rounded-lg p-4 mb-6 font-technical-mono text-technical-mono text-muted relative overflow-hidden group">
+<div class="absolute left-0 top-0 bottom-0 w-0.5 bg-accent-hypha"></div>
+<div class="flex justify-between items-center mb-2 text-on-surface-variant font-technical-mono-sm text-technical-mono-sm">
+<span>src/net/backoff.rs</span>
+<button class="opacity-0 group-hover:opacity-100 transition-opacity hover:text-primary"><span class="material-symbols-outlined text-[16px]">content_copy</span></button>
+</div>
+<pre class="m-0 overflow-x-auto text-[13px]"><code>fn calculate_jitter(base: Duration, attempt: u32) -&gt; Duration {
+    let max_sleep = base * (2_u32.pow(attempt));
+    let jitter = rand::thread_rng().gen_range(0..=max_sleep.as_millis());
+    Duration::from_millis(jitter as u64)
+}</code></pre>
+</div>
+<h3 class="font-headline-md text-headline-md font-medium text-on-surface mt-8 mb-4">Implementation Details</h3>
+<ul class="list-disc pl-5 space-y-2 mb-6 font-body-md text-body-md">
+<li>Base delay set to 100ms.</li>
+<li>Max backoff capped at 30 seconds to prevent indefinite hangs in interactive sessions.</li>
+<li>Applied primarily to the <span class="bg-surface-container-high border border-border px-1.5 py-0.5 rounded font-technical-mono-sm text-technical-mono-sm">/v2/sync</span> and <span class="bg-surface-container-high border border-border px-1.5 py-0.5 rounded font-technical-mono-sm text-technical-mono-sm">/v2/ingest</span> endpoints.</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<!-- Column 3: Backlinks Panel (Narrow, Right) -->
+<div class="w-64 border-l border-border bg-surface-container-lowest hidden xl:flex flex-col h-full shrink-0 z-30">
+<div class="h-12 border-b border-border flex items-center px-4 bg-surface-dim sticky top-0 shrink-0">
+<span class="font-label-caps text-label-caps text-muted uppercase tracking-wider flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">device_hub</span>
+                    Backlinks
+                </span>
+</div>
+<div class="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+<!-- Connected Node Graph Visualization (Abstract) -->
+<div class="w-full h-24 border border-border rounded bg-surface-dim relative overflow-hidden mb-2 flex items-center justify-center group cursor-pointer hover:border-outline-variant transition-colors">
+<span class="font-technical-mono-sm text-technical-mono-sm text-muted group-hover:text-primary transition-colors z-10 bg-surface-dim px-2 rounded">View Graph</span>
+<!-- SVG for network effect -->
+<svg class="absolute inset-0 w-full h-full opacity-20 group-hover:opacity-40 transition-opacity" preserveaspectratio="none" viewbox="0 0 100 100">
+<circle cx="50" cy="50" fill="#9cd2ba" r="4"></circle>
+<circle cx="20" cy="30" fill="#8B979F" r="2"></circle>
+<circle cx="80" cy="20" fill="#8B979F" r="2"></circle>
+<circle cx="70" cy="80" fill="#8B979F" r="2"></circle>
+<circle cx="30" cy="70" fill="#8B979F" r="2"></circle>
+<line stroke="#2A333B" stroke-dasharray="2,2" stroke-width="1" x1="50" x2="20" y1="50" y2="30"></line>
+<line stroke="#2A333B" stroke-dasharray="2,2" stroke-width="1" x1="50" x2="80" y1="50" y2="20"></line>
+<line stroke="#2A333B" stroke-dasharray="2,2" stroke-width="1" x1="50" x2="70" y1="50" y2="80"></line>
+<line stroke="#2A333B" stroke-dasharray="2,2" stroke-width="1" x1="50" x2="30" y1="50" y2="70"></line>
+</svg>
+</div>
+<!-- Backlink Items -->
+<div class="flex flex-col gap-3 relative before:absolute before:left-2 before:top-4 before:bottom-4 before:w-px before:bg-border before:border-l before:border-dashed before:border-border">
+<!-- Item 1 -->
+<div class="pl-6 relative hypha-connector group cursor-pointer">
+<div class="bg-surface-container border border-border p-3 rounded hover:border-accent-hypha transition-colors">
+<div class="font-body-sm text-body-sm text-primary font-medium mb-1 truncate">authenticate</div>
+<div class="font-technical-mono-sm text-technical-mono-sm text-muted line-clamp-2">
+                                ...implementation depends on the <span class="text-on-surface">[[rate-limits]]</span> module to prevent brute force...
+                            </div>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="pl-6 relative hypha-connector group cursor-pointer">
+<div class="bg-surface-container border border-border p-3 rounded hover:border-accent-hypha transition-colors">
+<div class="font-body-sm text-body-sm text-primary font-medium mb-1 truncate">infrastructure-ops</div>
+<div class="font-technical-mono-sm text-technical-mono-sm text-muted line-clamp-2">
+                                Review <span class="text-on-surface">[[rate-limits]]</span> configuration prior to the next regional rollout...
+                            </div>
+</div>
+</div>
+<!-- Item 3 -->
+<div class="pl-6 relative hypha-connector group cursor-pointer">
+<div class="bg-surface-container border border-border p-3 rounded hover:border-accent-hypha transition-colors">
+<div class="font-body-sm text-body-sm text-primary font-medium mb-1 truncate">scaling-strategy</div>
+<div class="font-technical-mono-sm text-technical-mono-sm text-muted line-clamp-2">
+                                To mitigate thundering herds, we established standard <span class="text-on-surface">[[rate-limits]]</span> across all ingress nodes...
+                            </div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>

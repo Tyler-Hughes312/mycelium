@@ -1,0 +1,102 @@
+# generated: 2026-07-25
+# last_updated: 2026-07-25
+# project: Mycelium
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: _bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# Action Item Status:
+#   - open: Committed during a retrospective, not yet addressed
+#   - in-progress: Actively being worked on
+#   - done: Completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+# - Retrospective appends its action items to action_items; sprint-status surfaces open ones
+
+generated: 2026-07-25
+last_updated: 2026-07-25
+project: Mycelium
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+
+development_status:
+  epic-1: done
+  1-1-project-scaffold-and-core-service-hello: done
+  1-2-localhost-http-api-health: done
+  1-3-config-data-directories: done
+  epic-1-retrospective: optional
+
+  epic-2: in-progress
+  2-1-register-workspace-repo: done
+  2-2-git-history-ingestion: done
+  2-3-symbol-parsing-py-ts-js-go: backlog
+  2-4-co-change-edges-index-progress: backlog
+  2-5-incremental-file-update-hook: backlog
+  epic-2-retrospective: optional
+
+  epic-3: backlog
+  3-1-embedding-adapter-model-bootstrap: backlog
+  3-2-embed-symbols-and-commits: backlog
+  3-3-hybrid-rag-query-api: backlog
+  3-4-focus-context-packet-api: backlog
+  epic-3-retrospective: optional
+
+  epic-4: backlog
+  4-1-vault-path-note-file-crud-api: backlog
+  4-2-wikilink-parse-backlinks: backlog
+  4-3-embed-notes-into-rag: backlog
+  epic-4-retrospective: optional
+
+  epic-5: backlog
+  5-1-tauri-shell-core-lifecycle: backlog
+  5-2-shared-mycelium-ui-package: backlog
+  5-3-workspace-index-console: backlog
+  5-4-desktop-rag-search: backlog
+  5-5-desktop-vault-editor: backlog
+  5-6-settings-privacy-panel: backlog
+  epic-5-retrospective: optional
+
+  epic-6: backlog
+  6-1-extension-skeleton-core-connection-status: backlog
+  6-2-side-panel-context-packet-view: backlog
+  6-3-create-note-from-current-symbol: backlog
+  epic-6-retrospective: optional
+
+  epic-7: backlog
+  7-1-mcp-server-process-wired-to-core: backlog
+  7-2-recall-tools-search-focus-note-commits: backlog
+  epic-7-retrospective: optional
+
+  epic-8: backlog
+  8-1-one-command-local-install-readme: backlog
+  8-2-embedding-model-eval-harness: backlog
+  8-3-demo-script-dogfood-checklist: backlog
+  epic-8-retrospective: optional

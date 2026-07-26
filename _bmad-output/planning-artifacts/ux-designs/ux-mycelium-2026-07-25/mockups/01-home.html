@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mycelium - Library</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed": "#ffdad7",
+                        "on-secondary": "#3f2e00",
+                        "tertiary-container": "#c1807d",
+                        "outline-variant": "#404944",
+                        "on-error": "#690005",
+                        "inverse-primary": "#346855",
+                        "surface-container-low": "#191c1f",
+                        "border": "#2A333B",
+                        "surface-dim": "#111417",
+                        "surface-raised": "#161B20",
+                        "on-error-container": "#ffdad6",
+                        "on-primary-fixed": "#002116",
+                        "secondary-fixed": "#ffdf9c",
+                        "on-tertiary-fixed": "#360e0e",
+                        "inverse-surface": "#e1e2e7",
+                        "on-surface": "#e1e2e7",
+                        "surface": "#111417",
+                        "on-secondary-container": "#d6b469",
+                        "tertiary": "#fdb4b0",
+                        "on-tertiary-container": "#481c1b",
+                        "on-tertiary-fixed-variant": "#6b3836",
+                        "on-primary": "#003828",
+                        "primary": "#9cd2ba",
+                        "surface-container-highest": "#323538",
+                        "surface-bright": "#37393d",
+                        "background": "#111417",
+                        "error-container": "#93000a",
+                        "on-tertiary": "#502221",
+                        "inverse-on-surface": "#2e3134",
+                        "surface-overlay": "#1C2329",
+                        "tertiary-fixed-dim": "#fdb4b0",
+                        "surface-container-high": "#272a2e",
+                        "surface-tint": "#9cd2ba",
+                        "surface-container-lowest": "#0b0e11",
+                        "surface-container": "#1d2023",
+                        "primary-fixed-dim": "#9cd2ba",
+                        "on-primary-fixed-variant": "#1a503e",
+                        "outline": "#8a938d",
+                        "on-background": "#e1e2e7",
+                        "secondary-container": "#5d4502",
+                        "on-secondary-fixed": "#251a00",
+                        "foreground": "#E7ECEF",
+                        "muted": "#8B979F",
+                        "error": "#ffb4ab",
+                        "danger": "#C45C5C",
+                        "primary-fixed": "#b7eed6",
+                        "surface-variant": "#323538",
+                        "primary-container": "#679b86",
+                        "on-primary-container": "#003123",
+                        "secondary": "#e5c276",
+                        "on-primary-container": "#003123",
+                        "secondary-fixed-dim": "#e5c276",
+                        "on-secondary-fixed-variant": "#5b4300",
+                        "accent-hypha": "#9cd2ba",
+                        "accent-spore": "#e5c276"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "xs": "4px",
+                        "margin": "16px",
+                        "sm": "8px",
+                        "lg": "16px",
+                        "md": "12px",
+                        "xl": "24px",
+                        "xxl": "32px",
+                        "gutter": "12px",
+                        "unit": "4px"
+                    },
+                    "fontFamily": {
+                        "technical-mono": ["IBM Plex Mono"],
+                        "body-sm": ["IBM Plex Sans"],
+                        "label-caps": ["IBM Plex Sans"],
+                        "headline-lg": ["IBM Plex Sans"],
+                        "label-md": ["IBM Plex Sans"],
+                        "body-md": ["IBM Plex Sans"],
+                        "headline-md": ["IBM Plex Sans"],
+                        "technical-mono-sm": ["IBM Plex Mono"],
+                        "headline-lg-mobile": ["IBM Plex Sans"]
+                    },
+                    "fontSize": {
+                        "technical-mono": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+                        "body-sm": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "label-caps": ["11px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "headline-lg": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "500" }],
+                        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "technical-mono-sm": ["11px", { "lineHeight": "14px", "fontWeight": "400" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body { background-color: #111417; color: #e1e2e7; font-family: 'IBM Plex Sans', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #2A333B; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #404944; }
+    </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex bg-surface text-on-surface">
+<!-- SideNavBar -->
+<nav class="fixed left-0 top-0 h-full w-[200px] bg-surface-container-lowest border-r border-border flex flex-col py-lg z-50">
+<!-- Header -->
+<div class="px-lg mb-xl flex items-center gap-sm">
+<div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center border border-border">
+<span class="material-symbols-outlined text-primary text-[18px]">account_tree</span>
+</div>
+<div>
+<h1 class="font-headline-md text-headline-md font-bold text-on-surface leading-tight">Mycelium</h1>
+<p class="font-body-sm text-body-sm text-muted leading-tight">Local Instrument</p>
+</div>
+</div>
+<!-- CTA -->
+<div class="px-lg mb-xl">
+<button class="w-full flex items-center justify-center gap-sm bg-primary-container text-on-primary-container hover:brightness-110 py-sm rounded transition-all duration-150 font-body-sm text-body-sm font-medium">
+<span class="material-symbols-outlined text-[16px]">add</span>
+            New Node
+        </button>
+</div>
+<!-- Main Nav -->
+<div class="flex-1 flex flex-col gap-xs font-body-sm text-body-sm">
+<div class="flex items-center gap-md py-sm cursor-pointer active:scale-95 text-primary font-bold border-l-2 border-primary pl-3 bg-surface-container-low">
+<span class="material-symbols-outlined text-[20px]">folder_open</span>
+            Library
+        </div>
+<div class="flex items-center gap-md py-sm cursor-pointer active:scale-95 text-muted pl-4 hover:bg-surface-container-high hover:text-on-surface transition-colors duration-150">
+<span class="material-symbols-outlined text-[20px]">search</span>
+            Search
+        </div>
+<div class="flex items-center gap-md py-sm cursor-pointer active:scale-95 text-muted pl-4 hover:bg-surface-container-high hover:text-on-surface transition-colors duration-150">
+<span class="material-symbols-outlined text-[20px]">security</span>
+            Vault
+        </div>
+<div class="flex items-center gap-md py-sm cursor-pointer active:scale-95 text-muted pl-4 hover:bg-surface-container-high hover:text-on-surface transition-colors duration-150">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+            Settings
+        </div>
+</div>
+<!-- Footer Nav -->
+<div class="mt-auto flex flex-col gap-xs font-body-sm text-body-sm pt-xl border-t border-border/50">
+<div class="flex items-center gap-md py-sm cursor-pointer active:scale-95 text-muted pl-4 hover:bg-surface-container-high hover:text-on-surface transition-colors duration-150">
+<span class="material-symbols-outlined text-[18px]">menu_book</span>
+            Docs
+        </div>
+<div class="flex items-center gap-md py-sm cursor-pointer active:scale-95 text-muted pl-4 hover:bg-surface-container-high hover:text-on-surface transition-colors duration-150">
+<span class="material-symbols-outlined text-[18px]">system_update_alt</span>
+            Update
+        </div>
+</div>
+</nav>
+<!-- TopNavBar -->
+<header class="fixed top-0 right-0 w-[calc(100%-200px)] h-12 bg-surface-dim border-b border-border flex items-center justify-between px-lg z-40">
+<!-- Left Area -->
+<div class="flex items-center gap-lg">
+<div class="flex items-center gap-xs text-muted">
+<span class="material-symbols-outlined text-[16px]">lock</span>
+<span class="font-technical-mono text-technical-mono text-primary-fixed-dim">Local Only</span>
+</div>
+</div>
+<!-- Trailing Actions -->
+<div class="flex items-center gap-lg">
+<!-- Status Pill -->
+<div class="flex items-center gap-xs px-sm py-[2px] rounded-full border border-border bg-surface-container-low">
+<div class="w-2 h-2 rounded-full bg-primary"></div>
+<span class="font-technical-mono-sm text-technical-mono-sm text-on-surface">Core · Connected</span>
+</div>
+<!-- Icons -->
+<div class="flex items-center gap-sm text-muted">
+<button class="hover:text-foreground transition-colors p-xs"><span class="material-symbols-outlined text-[18px]">hub</span></button>
+<button class="hover:text-foreground transition-colors p-xs"><span class="material-symbols-outlined text-[18px]">terminal</span></button>
+</div>
+<!-- Profile -->
+<div class="w-6 h-6 rounded-full bg-surface-container-high border border-border flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-[14px] text-muted">person</span>
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="ml-[200px] mt-12 w-full h-[calc(100vh-48px)] overflow-y-auto bg-surface-dim p-xl">
+<div class="max-w-5xl mx-auto flex flex-col gap-xl">
+<!-- Header Section -->
+<div class="flex items-end justify-between border-b border-border pb-md">
+<h2 class="font-headline-lg text-headline-lg font-medium text-on-surface">Library</h2>
+<button class="flex items-center gap-xs px-md py-sm bg-surface-container-low border border-border rounded text-on-surface hover:bg-surface-container-high transition-colors font-body-sm text-body-sm">
+<span class="material-symbols-outlined text-[16px]">add_box</span>
+                Add workspace
+            </button>
+</div>
+<!-- Search Input -->
+<div class="relative group">
+<span class="absolute left-md top-1/2 -translate-y-1/2 material-symbols-outlined text-muted text-[18px]">search</span>
+<input class="w-full bg-surface-container border border-border rounded pl-xl pr-md py-md text-on-surface font-body-md text-body-md focus:outline-none focus:border-primary transition-colors placeholder:text-muted" placeholder="Search your graph..." type="text"/>
+<div class="absolute right-md top-1/2 -translate-y-1/2 flex items-center gap-xs px-xs py-[2px] bg-surface-container-high border border-border rounded text-muted font-technical-mono-sm text-technical-mono-sm">
+<span>⌘K</span>
+</div>
+</div>
+<!-- Workspace List -->
+<div class="flex flex-col gap-sm">
+<!-- Row 1: PlayingAround/AIDJ -->
+<div class="group flex items-center gap-md p-md bg-surface-container-lowest border border-border rounded hover:bg-surface-container-low hover:border-outline transition-all cursor-pointer relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-[2px] bg-primary"></div>
+<div class="flex-1 min-w-0 flex flex-col gap-xs pl-sm">
+<div class="flex items-center justify-between">
+<h3 class="font-headline-md text-headline-md text-on-surface truncate">PlayingAround/AIDJ</h3>
+<div class="flex items-center gap-xs">
+<div class="w-1.5 h-1.5 rounded-full bg-primary"></div>
+<span class="font-label-caps text-label-caps text-muted uppercase">Healthy</span>
+</div>
+</div>
+<div class="font-technical-mono text-technical-mono text-muted truncate">~/projects/playingaround/aidj</div>
+</div>
+<div class="flex items-center gap-lg ml-xl border-l border-border pl-lg">
+<div class="flex flex-col gap-xs text-right min-w-[80px]">
+<span class="font-body-sm text-body-sm text-on-surface">142</span>
+<span class="font-technical-mono-sm text-technical-mono-sm text-muted">symbols</span>
+</div>
+<div class="flex flex-col gap-xs text-right min-w-[80px]">
+<span class="font-body-sm text-body-sm text-on-surface">84</span>
+<span class="font-technical-mono-sm text-technical-mono-sm text-muted">commits</span>
+</div>
+<div class="flex flex-col gap-xs text-right min-w-[80px]">
+<span class="font-body-sm text-body-sm text-on-surface">12</span>
+<span class="font-technical-mono-sm text-technical-mono-sm text-muted">notes</span>
+</div>
+</div>
+<div class="ml-lg min-w-[100px] text-right font-technical-mono-sm text-technical-mono-sm text-muted">
+                    idx: 2m ago
+                </div>
+</div>
+<!-- Row 2: MemoryOptimization -->
+<div class="group flex items-center gap-md p-md bg-surface-container-lowest border border-border rounded hover:bg-surface-container-low hover:border-outline transition-all cursor-pointer relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-[2px] bg-secondary"></div>
+<div class="flex-1 min-w-0 flex flex-col gap-xs pl-sm">
+<div class="flex items-center justify-between">
+<h3 class="font-headline-md text-headline-md text-on-surface truncate">MemoryOptimization</h3>
+<div class="flex items-center gap-xs">
+<div class="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></div>
+<span class="font-label-caps text-label-caps text-secondary uppercase">Indexing</span>
+</div>
+</div>
+<div class="font-technical-mono text-technical-mono text-muted truncate">~/dev/mem-opt</div>
+</div>
+<div class="flex items-center gap-lg ml-xl border-l border-border pl-lg">
+<div class="flex flex-col gap-xs text-right min-w-[80px]">
+<span class="font-body-sm text-body-sm text-on-surface">310</span>
+<span class="font-technical-mono-sm text-technical-mono-sm text-muted">symbols</span>
+</div>
+<div class="flex flex-col gap-xs text-right min-w-[80px]">
+<span class="font-body-sm text-body-sm text-on-surface">22</span>
+<span class="font-technical-mono-sm text-technical-mono-sm text-muted">commits</span>
+</div>
+<div class="flex flex-col gap-xs text-right min-w-[80px]">
+<span class="font-body-sm text-body-sm text-on-surface">4</span>
+<span class="font-technical-mono-sm text-technical-mono-sm text-muted">notes</span>
+</div>
+</div>
+<div class="ml-lg min-w-[100px] text-right font-technical-mono-sm text-technical-mono-sm text-muted">
+                    idx: 5s ago
+                </div>
+</div>
+<!-- Row 3: openclaw -->
+<div class="group flex items-center gap-md p-md bg-surface-container-lowest border border-border rounded hover:bg-surface-container-low hover:border-outline transition-all cursor-pointer relative overflow-hidden opacity-70 hover:opacity-100">
+<div class="absolute left-0 top-0 bottom-0 w-[2px] bg-border group-hover:bg-outline transition-colors"></div>
+<div class="flex-1 min-w-0 flex flex-col gap-xs pl-sm">
+<div class="flex items-center justify-between">
+<h3 class="font-headline-md text-headline-md text-on-surface truncate">openclaw</h3>
+<div class="flex items-center gap-xs">
+<div class="w-1.5 h-1.5 rounded-full bg-muted"></div>
+<span class="font-label-caps text-label-caps text-muted uppercase">Idle</span>
+</div>
+</div>
+<div class="font-technical-mono text-technical-mono text-muted truncate">~/foss/openclaw</div>
+</div>
+<div class="flex items-center gap-lg ml-xl border-l border-border pl-lg">
+<div class="flex flex-col gap-xs text-right min-w-[80px]">
+<span class="font-body-sm text-body-sm text-on-surface">89</span>
+<span class="font-technical-mono-sm text-technical-mono-sm text-muted">symbols</span>
+</div>
+<div class="flex flex-col gap-xs text-right min-w-[80px]">
+<span class="font-body-sm text-body-sm text-on-surface">156</span>
+<span class="font-technical-mono-sm text-technical-mono-sm text-muted">commits</span>
+</div>
+<div class="flex flex-col gap-xs text-right min-w-[80px]">
+<span class="font-body-sm text-body-sm text-on-surface">0</span>
+<span class="font-technical-mono-sm text-technical-mono-sm text-muted">notes</span>
+</div>
+</div>
+<div class="ml-lg min-w-[100px] text-right font-technical-mono-sm text-technical-mono-sm text-muted">
+                    idx: 1h ago
+                </div>
+</div>
+</div>
+</div>
+</main>
+</body></html>
