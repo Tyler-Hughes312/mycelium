@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-desktop"
-version = "0.1.1"
+version = "0.1.2"
 description = "Mycelium local-first Context Layer desktop shell"
 authors = ["Mycelium contributors"]
 license = "MIT"

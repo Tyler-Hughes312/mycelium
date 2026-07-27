@@ -47,9 +47,13 @@ Scaffolded automatically on Core first run (`ensure_local_layout`) and via `POST
 
 ## Enable for Cursor (any machine)
 
-1. Start Core: `./scripts/dev.sh` (or uvicorn on `:8787`)
-2. `./scripts/install.sh` (copies the Cursor rule + prepares MCP example)
-3. Copy `templates/cursor/mcp.json.example` → `.cursor/mcp.json` and replace `REPLACE_WITH_ABSOLUTE_PATH`
-4. Reload Cursor MCP / window
+**Fast path:** Download [Desktop](https://github.com/Tyler-Hughes312/mycelium/releases/tag/v0.1.2-desktop) (Core on `:8787`) + clone repo → `./scripts/install.sh` for `mycelium-mcp` only.
+
+1. Start Core: Desktop app, or `./scripts/dev.sh` / `mycelium serve` on `:8787`
+2. `./scripts/install.sh` (venv + Cursor rule + MCP example)
+3. Copy `templates/cursor/mcp.json.example` → `.cursor/mcp.json` (use absolute `…/venv/bin/mycelium-mcp`)
+4. Index a workspace in Desktop → Reload Cursor MCP
 
 Same MCP works for Claude Code / other MCP clients — they pick up server `instructions` automatically.
+
+See also the README section **Use with Cursor / Claude (MCP)**.

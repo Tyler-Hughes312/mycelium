@@ -1,12 +1,12 @@
 export const LINKS = {
   /** Release notes / other platforms. */
-  releases: "https://github.com/Tyler-Hughes312/mycelium/releases/tag/v0.1.1-desktop",
+  releases: "https://github.com/Tyler-Hughes312/mycelium/releases/tag/v0.1.2-desktop",
   /**
    * Same-origin Desktop DMG — fetched into public/downloads at build time
    * so Download CTAs save the file instead of opening GitHub.
    */
-  desktopDownload: "/downloads/Mycelium_0.1.1_aarch64.dmg",
-  desktopFilename: "Mycelium_0.1.1_aarch64.dmg",
+  desktopDownload: "/downloads/Mycelium_0.1.2_aarch64.dmg",
+  desktopFilename: "Mycelium_0.1.2_aarch64.dmg",
   github: "https://github.com/Tyler-Hughes312/mycelium",
   desktopInstallDoc:
     "https://github.com/Tyler-Hughes312/mycelium/blob/main/docs/DESKTOP-INSTALL.md",
@@ -123,7 +123,7 @@ export const SETUP_STEPS = [
   {
     n: 1,
     title: "Install",
-    body: "Download Desktop 0.1.1 from Releases, or add the Mycelium MCP server in Cursor / Claude.",
+    body: "Download Desktop 0.1.2 from Releases, or add the Mycelium MCP server in Cursor / Claude.",
   },
   {
     n: 2,

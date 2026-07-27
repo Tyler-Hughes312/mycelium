@@ -2,7 +2,8 @@
 
 [![CI](https://github.com/Tyler-Hughes312/mycelium/actions/workflows/ci.yml/badge.svg)](https://github.com/Tyler-Hughes312/mycelium/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.1.0-0ea5e9.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.1.2-0ea5e9.svg)](CHANGELOG.md)
+[![Site](https://img.shields.io/badge/site-getmycelium.vercel.app-black.svg)](https://getmycelium.vercel.app)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-3776AB.svg)](services/core/pyproject.toml)
 [![Local-first](https://img.shields.io/badge/privacy-local--first-22c55e.svg)](docs/DEPLOY.md)
 
@@ -37,14 +38,56 @@ This is **not** a chat journal or “agent memory vault.” Those tools optimize
 
 Install a packaged app (Core is bundled — no Python/Node required):
 
-- **Releases:** https://github.com/Tyler-Hughes312/mycelium/releases  
+- **Latest release:** https://github.com/Tyler-Hughes312/mycelium/releases/tag/v0.1.2-desktop  
+- **All releases:** https://github.com/Tyler-Hughes312/mycelium/releases  
 - **Install notes (Gatekeeper / SmartScreen):** [docs/DESKTOP-INSTALL.md](docs/DESKTOP-INSTALL.md)
+- **Marketing site:** https://getmycelium.vercel.app  
 
-Build locally on this machine:
+Build locally:
 
 ```bash
-./scripts/package-desktop.sh   # → .dmg / .app under apps/desktop/src-tauri/target/release/bundle/
+./scripts/package-desktop.sh   # → .dmg under apps/desktop/src-tauri/target/release/bundle/
 ```
+
+## Use with Cursor / Claude (MCP)
+
+Mycelium MCP is how agents get indexed context packets. Core must be running on `127.0.0.1:8787` (Desktop app **or** `./scripts/dev.sh` / `mycelium serve`).
+
+### 1. Install the MCP bridge
+
+```bash
+git clone https://github.com/Tyler-Hughes312/mycelium.git
+cd mycelium
+./scripts/install.sh          # creates venv + mycelium-mcp
+```
+
+Or point Cursor at the absolute binary: `…/mycelium/venv/bin/mycelium-mcp`.
+
+### 2. Add MCP config (Cursor)
+
+Copy [`templates/cursor/mcp.json.example`](templates/cursor/mcp.json.example) → `.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "mycelium": {
+      "command": "/ABSOLUTE/PATH/TO/mycelium/venv/bin/mycelium-mcp",
+      "args": [],
+      "env": { "MYCELIUM_CORE_URL": "http://127.0.0.1:8787" }
+    }
+  }
+}
+```
+
+Optional agent rule: copy [`templates/cursor/mycelium-mcp.mdc`](templates/cursor/mycelium-mcp.mdc) → `.cursor/rules/`.
+
+### 3. Index once, then ask
+
+1. Open Desktop (or web UI) → **Library** → add your repo → **Index**
+2. Reload Cursor MCP
+3. Ask the agent to use Mycelium (`mycelium_search` / `mycelium_focus`) instead of grepping the whole tree
+
+Full write/read policy: [docs/AGENT-SECOND-BRAIN.md](docs/AGENT-SECOND-BRAIN.md) · ops: [docs/DEPLOY.md](docs/DEPLOY.md#mcp-path-based)
 
 ## Develop from source (≈15 minutes)
 

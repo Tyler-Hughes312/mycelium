@@ -5,6 +5,18 @@ All notable changes to Mycelium are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] — 2026-07-27
+
+### Added
+
+- Desktop **Impact** cost estimates: tokens saved × configured $/1M input, with Assumed / Inferred / Unknown model labels
+- Settings: default impact model + custom $/1M rates; Core `/impact/pricing` + `X-Mycelium-Model-Id` probe
+- Marketing site token-efficiency positioning (`apps/web`, getmycelium.vercel.app)
+
+### Changed
+
+- Version bump 0.1.1 → 0.1.2 (Core, Desktop, UI)
+
 ## [0.1.1] — 2026-07-26
 
 ### Fixed

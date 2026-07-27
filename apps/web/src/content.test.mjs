@@ -3,11 +3,11 @@ import { test } from "node:test";
 
 test("CTA Download is same-origin DMG (not GitHub navigation)", async () => {
   const { LINKS } = await import("./content.ts");
-  assert.equal(LINKS.desktopDownload, "/downloads/Mycelium_0.1.1_aarch64.dmg");
-  assert.equal(LINKS.desktopFilename, "Mycelium_0.1.1_aarch64.dmg");
+  assert.equal(LINKS.desktopDownload, "/downloads/Mycelium_0.1.2_aarch64.dmg");
+  assert.equal(LINKS.desktopFilename, "Mycelium_0.1.2_aarch64.dmg");
   assert.equal(
     LINKS.releases,
-    "https://github.com/Tyler-Hughes312/mycelium/releases/tag/v0.1.1-desktop",
+    "https://github.com/Tyler-Hughes312/mycelium/releases/tag/v0.1.2-desktop",
   );
   assert.equal(LINKS.github, "https://github.com/Tyler-Hughes312/mycelium");
   assert.equal(LINKS.desktopInstallDoc, "https://github.com/Tyler-Hughes312/mycelium/blob/main/docs/DESKTOP-INSTALL.md");
