@@ -11,9 +11,9 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
 
-const FILENAME = "Mycelium_0.1.3_aarch64.dmg";
+const FILENAME = "Mycelium_0.1.4_aarch64.dmg";
 const SOURCE =
-  "https://github.com/Tyler-Hughes312/mycelium/releases/download/v0.1.3-desktop/Mycelium_0.1.3_aarch64.dmg";
+  "https://github.com/Tyler-Hughes312/mycelium/releases/download/v0.1.4-desktop/Mycelium_0.1.4_aarch64.dmg";
 const DEST_DIR = join(ROOT, "public", "downloads");
 const DEST = join(DEST_DIR, FILENAME);
 

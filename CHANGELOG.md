@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.4] — 2026-07-27
+
 ### Added
 
 - **Mycelium Chat RAG window** — Desktop Chat + Core `/threads` assemble each model call from prefs + recent tail + ranked thread/code hits (never the full transcript). Cursor’s conversation window is not rewritten. Settings: `allow_remote_llm`, OpenAI-compatible base URL / model, API key via `MYCELIUM_LLM_API_KEY` or `~/.mycelium/llm_api_key`. Impact lists `tool=chat` savings.
@@ -22,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Marketing site + README + positioning: Desktop Chat RAG window (honest: does not rewrite Cursor’s host transcript)
 - `install.sh` / `install_cursor_user_config.py` delegate to multi-client installer; post-install points at GETTING-STARTED
 - Design spec `docs/superpowers/specs/2026-07-27-rag-conversation-window-design.md` status → Accepted
+- Version bump 0.1.3 → 0.1.4 (Core, Desktop, UI)
 
 ## [0.1.3] — 2026-07-27
 

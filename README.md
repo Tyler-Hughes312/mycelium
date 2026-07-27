@@ -14,14 +14,14 @@
   ·
   <a href="https://getmycelium.vercel.app">Website</a>
   ·
-  <a href="https://github.com/Tyler-Hughes312/mycelium/releases/tag/v0.1.3-desktop">Download Desktop</a>
+  <a href="https://github.com/Tyler-Hughes312/mycelium/releases/tag/v0.1.4-desktop">Download Desktop</a>
   ·
   <a href="docs/marketing/">Marketing / launch</a>
 </p>
 
 [![CI](https://github.com/Tyler-Hughes312/mycelium/actions/workflows/ci.yml/badge.svg)](https://github.com/Tyler-Hughes312/mycelium/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.1.3-0ea5e9.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.1.4-0ea5e9.svg)](CHANGELOG.md)
 [![Site](https://img.shields.io/badge/site-getmycelium.vercel.app-black.svg)](https://getmycelium.vercel.app)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-3776AB.svg)](services/core/pyproject.toml)
 [![Local-first](https://img.shields.io/badge/privacy-local--first-22c55e.svg)](docs/DEPLOY.md)
@@ -67,7 +67,7 @@ This is **not** a chat journal or “agent memory vault.” Those tools optimize
 
 Install a packaged app (Core is bundled — no Python/Node required):
 
-- **Latest release:** https://github.com/Tyler-Hughes312/mycelium/releases/tag/v0.1.3-desktop  
+- **Latest release:** https://github.com/Tyler-Hughes312/mycelium/releases/tag/v0.1.4-desktop  
 - **All releases:** https://github.com/Tyler-Hughes312/mycelium/releases  
 - **Install notes (Gatekeeper / SmartScreen):** [docs/DESKTOP-INSTALL.md](docs/DESKTOP-INSTALL.md)
 - **Then vault + agents:** [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md)

@@ -1,12 +1,12 @@
 # Install Mycelium Desktop
 
-Download **0.1.3** from:
-https://github.com/Tyler-Hughes312/mycelium/releases/tag/v0.1.3-desktop
+Download **0.1.4** from:
+https://github.com/Tyler-Hughes312/mycelium/releases/tag/v0.1.4-desktop
 
 | Platform | Asset |
 |---|---|
-| macOS (Apple Silicon) | [`Mycelium_0.1.3_aarch64.dmg`](https://github.com/Tyler-Hughes312/mycelium/releases/download/v0.1.3-desktop/Mycelium_0.1.3_aarch64.dmg) |
-| Windows (x64) | [`Mycelium_0.1.3_x64-setup.exe`](https://github.com/Tyler-Hughes312/mycelium/releases/download/v0.1.3-desktop/Mycelium_0.1.3_x64-setup.exe) |
+| macOS (Apple Silicon) | [`Mycelium_0.1.4_aarch64.dmg`](https://github.com/Tyler-Hughes312/mycelium/releases/download/v0.1.4-desktop/Mycelium_0.1.4_aarch64.dmg) |
+| Windows (x64) | [`Mycelium_0.1.4_x64-setup.exe`](https://github.com/Tyler-Hughes312/mycelium/releases/download/v0.1.4-desktop/Mycelium_0.1.4_x64-setup.exe) |
 
 ## First launch
 

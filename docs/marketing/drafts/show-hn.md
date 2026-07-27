@@ -19,7 +19,7 @@ This is deliberately not another “agent memory vault.” Those remember conver
 
 Site: https://getmycelium.vercel.app
 Repo: https://github.com/Tyler-Hughes312/mycelium
-Desktop: releases (v0.1.3) — or ./scripts/dev.sh for source
+Desktop: releases (v0.1.4) — or ./scripts/dev.sh for source
 
 Quick dogfood: install → Library → add fixtures/dogfood-rate-limits → Index → ask MCP “how did we handle rate limits”.
 

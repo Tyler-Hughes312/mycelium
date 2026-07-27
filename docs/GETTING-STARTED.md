@@ -10,7 +10,7 @@ Nothing leaves `localhost`. Indexes and vault live under `~/.mycelium/`.
 
 ### 1. Install Desktop (Core + vault)
 
-1. Download **0.1.3**: [Desktop release](https://github.com/Tyler-Hughes312/mycelium/releases/tag/v0.1.3-desktop) · [install notes](DESKTOP-INSTALL.md)
+1. Download **0.1.4**: [Desktop release](https://github.com/Tyler-Hughes312/mycelium/releases/tag/v0.1.4-desktop) · [install notes](DESKTOP-INSTALL.md)
 2. Launch Mycelium. Core binds `http://127.0.0.1:8787`.
 3. On first run, Core **scaffolds the Thinking Vault** at:
 

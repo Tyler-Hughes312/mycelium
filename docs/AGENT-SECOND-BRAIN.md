@@ -76,7 +76,7 @@ Desktop **Chat** is optional and separate from Cursor. Each model call is assemb
 
 **Fast path:**
 
-1. Download [Desktop](https://github.com/Tyler-Hughes312/mycelium/releases/tag/v0.1.3-desktop) (Core on `:8787`) — vault appears at `~/.mycelium/vault/`
+1. Download [Desktop](https://github.com/Tyler-Hughes312/mycelium/releases/tag/v0.1.4-desktop) (Core on `:8787`) — vault appears at `~/.mycelium/vault/`
 2. Clone this repo → `./scripts/install.sh` — venv + **MCP into Cursor / VS Code / Codex / Windsurf / Claude Desktop** + Cursor `workspaceOpen` hook
 3. Claude Code: `claude mcp add mycelium --env MYCELIUM_CORE_URL=http://127.0.0.1:8787 -- …/venv/bin/mycelium-mcp`
 4. Open a git repo (Cursor auto-indexes) → agents call `mycelium_session_start` / `reuse_check`
