@@ -274,7 +274,7 @@ export function AppShell() {
             <Outlet key={routesRemountKey(coreConnected)} />
           ) : (
             <div className="h-full flex items-center justify-center p-xl">
-              <div className="text-center max-w-sm space-y-sm">
+              <div className="text-center max-w-[24rem] space-y-sm">
                 <span
                   className="material-symbols-outlined text-[28px] text-primary animate-pulse"
                   style={{ fontVariationSettings: "'FILL' 1" }}

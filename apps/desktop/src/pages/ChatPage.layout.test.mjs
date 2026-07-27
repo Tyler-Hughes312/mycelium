@@ -41,3 +41,14 @@ test("Chat page links to Settings on LLM config errors", () => {
   assert.match(source, /to="\/settings"/);
   assert.match(source, /Open Settings/);
 });
+
+test("Chat empty state offers Create thread CTA", () => {
+  assert.match(source, /Create thread/);
+  assert.match(source, /pickDefaultWorkspaceId/);
+});
+
+test("Chat empty cards use rem max-width not spacing-scale max-w-xl", () => {
+  // Custom --spacing-xl is 24px; max-w-xl collapses to that and stacks glyphs.
+  assert.match(source, /max-w-\[36rem\]/);
+  assert.doesNotMatch(source, /max-w-xl/);
+});

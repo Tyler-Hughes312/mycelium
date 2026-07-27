@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.5] — 2026-07-27
+
+### Fixed
+
+- Desktop Chat empty state collapsed to a ~24px column (`max-w-xl` bound to `--spacing-xl`) — use rem max-widths; prefer real workspaces over `/tmp` fixtures; Create thread CTA; encode `thread:` ids in API paths
+
+### Changed
+
+- Version bump 0.1.4 → 0.1.5 (Core, Desktop, UI)
+
 ## [0.1.4] — 2026-07-27
 
 ### Added

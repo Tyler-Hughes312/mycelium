@@ -370,7 +370,7 @@ export function SettingsPage() {
                   <div className="md:col-span-3">
                     <select
                       id="impact-default-model"
-                      className="w-full max-w-md bg-surface-container border border-border rounded-lg h-10 px-md font-technical-mono text-technical-mono text-foreground focus:outline-none focus:border-primary"
+                      className="w-full max-w-[28rem] bg-surface-container border border-border rounded-lg h-10 px-md font-technical-mono text-technical-mono text-foreground focus:outline-none focus:border-primary"
                       value={impactDefaultModel}
                       onChange={(e) => setImpactDefaultModel(e.target.value)}
                     >
@@ -529,7 +529,7 @@ export function SettingsPage() {
             <div className="md:col-span-3">
               <input
                 id="llm-model"
-                className="w-full max-w-md bg-surface-container border border-border rounded-lg h-10 px-md font-technical-mono text-technical-mono text-foreground focus:outline-none focus:border-primary"
+                className="w-full max-w-[28rem] bg-surface-container border border-border rounded-lg h-10 px-md font-technical-mono text-technical-mono text-foreground focus:outline-none focus:border-primary"
                 type="text"
                 value={llmModel}
                 onChange={(e) => setLlmModel(e.target.value)}

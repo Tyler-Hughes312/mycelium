@@ -31,7 +31,7 @@ def ensure_test_layout(home: Path) -> MyceliumConfig:
 
 
 def test_package_version() -> None:
-    assert __version__ == "0.1.4"
+    assert __version__ == "0.1.5"
 
 
 def test_privacy_guards() -> None:

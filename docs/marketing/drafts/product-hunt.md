@@ -18,7 +18,7 @@ Built for developers who want indexed retrieval and token efficiency — not ano
 
 **Maker first comment:**
 ```
-Maker here — happy to walk through Library → Index → MCP search. Desktop DMG is on GitHub Releases (v0.1.4). Site metrics labeled illustrative until Impact dogfood numbers are published. Feedback welcome on first-run and MCP setup friction.
+Maker here — happy to walk through Library → Index → MCP search. Desktop DMG is on GitHub Releases (v0.1.5). Site metrics labeled illustrative until Impact dogfood numbers are published. Feedback welcome on first-run and MCP setup friction.
 ```
 
 **Assets needed before submit:** 1 gallery image (Desktop Library/Search), optional GIF of MCP answer. Don’t launch PH without visuals.

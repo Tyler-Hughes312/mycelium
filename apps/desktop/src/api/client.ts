@@ -785,9 +785,9 @@ export type ChatHandoffResponse = {
   note?: VaultNote;
 };
 
-/** Thread ids contain `:` — leave unencoded so FastAPI path matching works. */
+/** Thread ids contain `:` — encode so fetch/webview path segments stay intact. */
 function threadPath(threadId: string) {
-  return `/threads/${threadId}`;
+  return `/threads/${encodeURIComponent(threadId)}`;
 }
 
 export async function createThread(workspaceId: string, title = "") {

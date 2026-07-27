@@ -244,7 +244,7 @@ export function ImpactPage() {
             <p className="font-label-md text-label-md text-on-surface">
               No impact events yet
             </p>
-            <p className="font-body-sm text-body-sm text-on-surface-variant max-w-lg">
+            <p className="font-body-sm text-body-sm text-on-surface-variant max-w-[32rem]">
               Use Desktop Search, Focus via MCP, Vault pack, or Mycelium Chat —
               Core will log estimated savings here after each recall (including{" "}
               <code className="font-technical-mono-sm text-technical-mono-sm text-primary">

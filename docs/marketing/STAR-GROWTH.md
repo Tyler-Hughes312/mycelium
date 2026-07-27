@@ -18,7 +18,7 @@ Sources synthesized: DEV/Gingiris star-growth guides, AFFiNE launch case studies
 - Repo: https://github.com/Tyler-Hughes312/mycelium
 - Stars (2026-07-27): **2**
 - Homepage: https://getmycelium.vercel.app
-- Release: v0.1.4-desktop
+- Release: v0.1.5-desktop
 
 ## What we will not do
 

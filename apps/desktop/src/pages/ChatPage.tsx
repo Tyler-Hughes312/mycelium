@@ -33,6 +33,28 @@ function threadLabel(t: ChatThread) {
   return `Thread ${t.id.replace(/^thread:/, "").slice(0, 8)}`;
 }
 
+/** Prefer real indexed repos over ephemeral /tmp test workspaces. */
+function pickDefaultWorkspaceId(rows: Workspace[], prev = ""): string {
+  if (prev && rows.some((w) => w.id === prev)) return prev;
+  if (rows.length === 0) return "";
+  const score = (w: Workspace) => {
+    const path = (w.path || "").toLowerCase();
+    const name = (w.name || "").toLowerCase();
+    let s = 0;
+    if (path.includes("/tmp/") || path.includes("/private/tmp/") || name.startsWith("tmp/")) {
+      s -= 100;
+    }
+    if (w.status === "healthy" || w.status === "indexing") s += 40;
+    if ((w.symbols ?? 0) > 0 || (w.commits ?? 0) > 0) s += 20;
+    if (name.includes("memoryoptimization") || path.includes("memoryoptimization")) {
+      s += 30;
+    }
+    return s;
+  };
+  const sorted = [...rows].sort((a, b) => score(b) - score(a));
+  return sorted[0]?.id ?? "";
+}
+
 const TRANSCRIPT_PAGE = 100;
 
 export function ChatPage() {
@@ -96,10 +118,9 @@ export function ChatPage() {
     void listWorkspaces()
       .then((rows) => {
         setWorkspaces(rows);
-        setWorkspaceId((prev) => {
-          if (prev && rows.some((w) => w.id === prev)) return prev;
-          return rows[0]?.id ?? "";
-        });
+        setWorkspaceId((prev) => pickDefaultWorkspaceId(rows, prev));
+        setError(null);
+        setErrorCode(null);
       })
       .catch((err: unknown) => {
         setError(err instanceof Error ? err.message : "Failed to load workspaces");
@@ -132,6 +153,8 @@ export function ChatPage() {
     try {
       const rows = await listThreads(wsId);
       setThreads(rows);
+      setError(null);
+      setErrorCode(null);
       setActiveId((prev) => {
         if (prev && rows.some((t) => t.id === prev)) return prev;
         return rows[0]?.id ?? null;
@@ -532,7 +555,7 @@ export function ChatPage() {
           className="flex-1 min-h-0 overflow-y-auto px-6 py-4 space-y-3"
         >
           {!activeId ? (
-            <section className="rounded-xl border border-border bg-surface-container-lowest px-lg py-xl space-y-sm max-w-xl mx-auto mt-8">
+            <section className="w-full rounded-xl border border-border bg-surface-container-lowest px-lg py-xl space-y-sm max-w-[36rem] mx-auto mt-8">
               <p className="font-label-md text-label-md text-on-surface">
                 Start a Mycelium Chat thread
               </p>
@@ -541,7 +564,7 @@ export function ChatPage() {
                 threads stay in Mycelium Chat; Cursor&apos;s own window is
                 unchanged.
               </p>
-              {!workspaceId && (
+              {!workspaceId ? (
                 <p className="font-body-sm text-body-sm text-muted">
                   Add a repo in{" "}
                   <Link
@@ -552,12 +575,21 @@ export function ChatPage() {
                   </Link>{" "}
                   first.
                 </p>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void onCreateThread()}
+                  disabled={!coreOnline || creating}
+                  className="mt-2 h-10 px-4 rounded-lg bg-primary text-on-primary font-label-md text-label-md disabled:opacity-40 disabled:pointer-events-none"
+                >
+                  {creating ? "Creating…" : "Create thread"}
+                </button>
               )}
             </section>
           ) : loadingTurns && turns.length === 0 ? (
             <p className="font-body-sm text-body-sm text-muted">Loading…</p>
           ) : turns.length === 0 ? (
-            <section className="rounded-xl border border-border bg-surface-container-lowest px-lg py-xl space-y-sm max-w-xl mx-auto mt-8">
+            <section className="w-full rounded-xl border border-border bg-surface-container-lowest px-lg py-xl space-y-sm max-w-[36rem] mx-auto mt-8">
               <p className="font-label-md text-label-md text-on-surface">
                 Empty thread
               </p>
