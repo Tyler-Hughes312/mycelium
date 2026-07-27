@@ -3,6 +3,7 @@ import {
   clearImpactEvents,
   disconnectGitHub,
   getGitHubStatus,
+  getImpactPricing,
   getSettings,
   patchSettings,
   pollGitHubDevice,
@@ -11,6 +12,7 @@ import {
   type AppSettings,
   type EmbeddingStatus,
   type GitHubStatus,
+  type ImpactPricing,
 } from "../api/client";
 
 const MODEL_OPTIONS = [
@@ -45,14 +47,28 @@ export function SettingsPage() {
   const [model, setModel] = useState<string>(MODEL_OPTIONS[0].id);
   const [githubClientId, setGithubClientId] = useState("");
   const [impactTracking, setImpactTracking] = useState(true);
+  const [impactPricing, setImpactPricing] = useState<ImpactPricing | null>(null);
+  const [impactDefaultModel, setImpactDefaultModel] = useState("claude-sonnet-4");
+  const [impactRates, setImpactRates] = useState<Record<string, number>>({});
   const [github, setGithub] = useState<GitHubStatus | null>(null);
   const [pat, setPat] = useState("");
   const [deviceCode, setDeviceCode] = useState<string | null>(null);
   const [deviceUri, setDeviceUri] = useState<string | null>(null);
   const [polling, setPolling] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savingImpact, setSavingImpact] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const applyImpactPricingDraft = useCallback((pricing: ImpactPricing) => {
+    setImpactPricing(pricing);
+    setImpactDefaultModel(pricing.default_model);
+    setImpactRates(
+      Object.fromEntries(
+        pricing.rates.map((rate) => [rate.id, rate.usd_per_1m_input]),
+      ),
+    );
+  }, []);
 
   const refreshGitHub = useCallback(async () => {
     const status = await getGitHubStatus();
@@ -61,8 +77,8 @@ export function SettingsPage() {
   }, []);
 
   useEffect(() => {
-    void getSettings()
-      .then(async (data) => {
+    void Promise.all([getSettings(), getImpactPricing()])
+      .then(async ([data, pricing]) => {
         setSettings(data.settings);
         setRuntime(data.embedding_runtime as Partial<EmbeddingStatus>);
         setVaultDir(data.settings.vault_dir);
@@ -70,13 +86,14 @@ export function SettingsPage() {
         setModel(data.settings.embedding_model);
         setGithubClientId(data.settings.github_client_id ?? "");
         setImpactTracking(data.settings.impact_tracking_enabled !== false);
+        applyImpactPricingDraft(pricing);
         if (data.github) setGithub(data.github);
         else await refreshGitHub();
       })
       .catch((err: unknown) => {
         setError(err instanceof Error ? err.message : "Failed to load settings");
       });
-  }, [refreshGitHub]);
+  }, [applyImpactPricingDraft, refreshGitHub]);
 
   async function onApply() {
     setSaving(true);
@@ -154,6 +171,44 @@ export function SettingsPage() {
     await refreshGitHub();
   }
 
+  async function onSaveImpactPricing() {
+    setSavingImpact(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const res = await patchSettings({
+        impact_default_model: impactDefaultModel,
+        impact_pricing_overrides: impactRates,
+      });
+      setSettings(res.settings);
+      applyImpactPricingDraft(await getImpactPricing());
+      setMessage("Impact pricing saved.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Impact pricing save failed");
+    } finally {
+      setSavingImpact(false);
+    }
+  }
+
+  async function onResetImpactPricing() {
+    setSavingImpact(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const res = await patchSettings({
+        impact_pricing_overrides: {},
+        impact_default_model: "claude-sonnet-4",
+      });
+      setSettings(res.settings);
+      applyImpactPricingDraft(await getImpactPricing());
+      setMessage("Impact pricing reset to defaults.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Impact pricing reset failed");
+    } finally {
+      setSavingImpact(false);
+    }
+  }
+
   return (
     <div className="h-full overflow-y-auto p-xl scroll-smooth bg-surface">
       <div className="max-w-3xl mx-auto space-y-xl pb-xxl">
@@ -226,6 +281,111 @@ export function SettingsPage() {
                 Clear impact history
               </button>
             </div>
+
+            {impactPricing && (
+              <div className="mt-lg space-y-md border-t border-border pt-md">
+                <div>
+                  <p className="font-label-md text-label-md text-on-surface">
+                    Impact cost estimates
+                  </p>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant mt-xs leading-relaxed">
+                    {impactPricing.disclaimer}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-md items-start">
+                  <div className="md:col-span-1 pt-sm">
+                    <label
+                      htmlFor="impact-default-model"
+                      className="font-label-md text-label-md text-foreground block"
+                    >
+                      Default model
+                    </label>
+                  </div>
+                  <div className="md:col-span-3">
+                    <select
+                      id="impact-default-model"
+                      className="w-full max-w-md bg-surface-container border border-border rounded-lg h-10 px-md font-technical-mono text-technical-mono text-foreground focus:outline-none focus:border-primary"
+                      value={impactDefaultModel}
+                      onChange={(e) => setImpactDefaultModel(e.target.value)}
+                    >
+                      {impactPricing.rates.map((rate) => (
+                        <option key={rate.id} value={rate.id}>
+                          {rate.id}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="font-technical-mono-sm text-technical-mono-sm text-muted mt-xs">
+                      Used when MCP does not send a model id (labeled Assumed on
+                      Impact).
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-sm">
+                  <p className="font-label-md text-label-md text-foreground">
+                    API list prices ($ / 1M input tokens)
+                  </p>
+                  {impactPricing.rates.map((rate) => (
+                    <div
+                      key={rate.id}
+                      className="grid grid-cols-1 md:grid-cols-4 gap-md items-center"
+                    >
+                      <div className="md:col-span-1 flex flex-wrap items-center gap-sm">
+                        <span className="font-technical-mono-sm text-technical-mono-sm text-on-surface">
+                          {rate.id}
+                        </span>
+                        {rate.overridden ? (
+                          <span className="font-label-caps text-label-caps text-primary uppercase tracking-wider">
+                            overridden
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="md:col-span-3 flex items-center gap-sm">
+                        <span className="font-body-sm text-body-sm text-muted">$</span>
+                        <input
+                          type="number"
+                          min={0}
+                          step={0.01}
+                          aria-label={`${rate.id} USD per 1M input tokens`}
+                          className="w-32 bg-surface-container border border-border rounded-lg h-10 px-sm font-technical-mono text-technical-mono text-foreground text-center focus:outline-none focus:border-primary"
+                          value={impactRates[rate.id] ?? rate.usd_per_1m_input}
+                          onChange={(e) => {
+                            const next = parseFloat(e.target.value);
+                            setImpactRates((prev) => ({
+                              ...prev,
+                              [rate.id]: Number.isFinite(next) ? next : 0,
+                            }));
+                          }}
+                        />
+                        <span className="font-body-sm text-body-sm text-muted">
+                          / 1M input
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex flex-wrap gap-sm justify-end pt-sm">
+                  <button
+                    type="button"
+                    disabled={savingImpact}
+                    onClick={() => void onResetImpactPricing()}
+                    className="px-md h-9 rounded-lg border border-border font-label-md text-label-md disabled:opacity-50"
+                  >
+                    Reset defaults
+                  </button>
+                  <button
+                    type="button"
+                    disabled={savingImpact}
+                    onClick={() => void onSaveImpactPricing()}
+                    className="px-md h-9 rounded-xl bg-primary text-on-primary font-label-md text-label-md disabled:opacity-50"
+                  >
+                    {savingImpact ? "Saving…" : "Save pricing"}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </section>
 
