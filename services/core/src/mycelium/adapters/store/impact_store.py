@@ -10,6 +10,16 @@ from mycelium.adapters.store.json_io import atomic_write_json, read_json_object
 
 RangeName = Literal["today", "week", "all"]
 
+_SOURCE_PRIORITY = {"inferred": 3, "default": 2, "unknown": 1}
+
+
+def _dominant_model_source(counts: dict[str, int]) -> str:
+    if not counts:
+        return "unknown"
+    max_count = max(counts.values())
+    candidates = [source for source, count in counts.items() if count == max_count]
+    return max(candidates, key=lambda source: _SOURCE_PRIORITY.get(source, 0))
+
 
 class ImpactStore:
     def __init__(self, path: Path) -> None:
@@ -49,6 +59,9 @@ class ImpactStore:
             start = None
 
         served = baseline = saved = count = 0
+        usd_saved_total = 0.0
+        by_tool: dict[str, dict[str, Any]] = {}
+        by_model: dict[str, dict[str, Any]] = {}
         for ev in self._load():
             ts_raw = str(ev.get("ts") or "")
             try:
@@ -60,11 +73,59 @@ class ImpactStore:
             if start is not None and ts < start:
                 continue
             count += 1
-            served += int(ev.get("served_tokens") or 0)
-            baseline += int(ev.get("baseline_tokens") or 0)
-            saved += int(ev.get("tokens_saved") or 0)
+            ev_served = int(ev.get("served_tokens") or 0)
+            ev_baseline = int(ev.get("baseline_tokens") or 0)
+            ev_saved = int(ev.get("tokens_saved") or 0)
+            ev_usd = float(ev.get("usd_saved") or 0)
+            served += ev_served
+            baseline += ev_baseline
+            saved += ev_saved
+            usd_saved_total += ev_usd
+
+            tool = str(ev.get("tool") or "")
+            tool_row = by_tool.setdefault(
+                tool,
+                {"tool": tool, "event_count": 0, "tokens_saved": 0, "usd_saved": 0.0},
+            )
+            tool_row["event_count"] += 1
+            tool_row["tokens_saved"] += ev_saved
+            tool_row["usd_saved"] += ev_usd
+
+            model_id = str(ev.get("model_id") or "")
+            model_row = by_model.setdefault(
+                model_id,
+                {
+                    "model_id": model_id,
+                    "event_count": 0,
+                    "tokens_saved": 0,
+                    "usd_saved": 0.0,
+                    "_source_counts": {},
+                },
+            )
+            model_row["event_count"] += 1
+            model_row["tokens_saved"] += ev_saved
+            model_row["usd_saved"] += ev_usd
+            source = str(ev.get("model_source") or "unknown")
+            source_counts = model_row["_source_counts"]
+            source_counts[source] = int(source_counts.get(source, 0)) + 1
 
         pct = round((saved / baseline) * 100, 1) if baseline > 0 else 0.0
+        by_tool_list = sorted(
+            by_tool.values(), key=lambda row: row["tokens_saved"], reverse=True
+        )
+        by_model_list: list[dict[str, Any]] = []
+        for row in by_model.values():
+            source_counts = row.pop("_source_counts")
+            by_model_list.append(
+                {
+                    "model_id": row["model_id"],
+                    "model_source_dominant": _dominant_model_source(source_counts),
+                    "event_count": row["event_count"],
+                    "tokens_saved": row["tokens_saved"],
+                    "usd_saved": row["usd_saved"],
+                }
+            )
+        by_model_list.sort(key=lambda row: row["tokens_saved"], reverse=True)
         return {
             "range": range_name,
             "event_count": count,
@@ -72,4 +133,7 @@ class ImpactStore:
             "baseline_tokens": baseline,
             "tokens_saved": saved,
             "savings_pct": pct,
+            "usd_saved": usd_saved_total,
+            "by_tool": by_tool_list,
+            "by_model": by_model_list,
         }

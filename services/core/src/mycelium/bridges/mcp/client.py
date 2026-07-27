@@ -17,7 +17,9 @@ class CoreHttp:
         *,
         timeout: float = 30.0,
         client: httpx.Client | None = None,
+        headers: dict[str, str] | None = None,
     ) -> None:
+        self._extra_headers = dict(headers or {})
         if client is not None:
             self._client = client
             self._owns_client = False
@@ -158,21 +160,25 @@ class CoreHttp:
 
     def vault_reindex(self, workspace_id: str | None = None) -> dict[str, Any]:
         params = {"workspace_id": workspace_id} if workspace_id else None
-        res = self._client.post("/vault/reindex", params=params)
+        res = self._client.post(
+            "/vault/reindex",
+            params=params,
+            headers=self._extra_headers or None,
+        )
         res.raise_for_status()
         return res.json().get("reindex") or {}
 
     def _get(self, path: str, *, params: dict[str, Any] | None = None) -> dict[str, Any]:
-        res = self._client.get(path, params=params)
+        res = self._client.get(path, params=params, headers=self._extra_headers or None)
         res.raise_for_status()
         return res.json()
 
     def _post(self, path: str, body: dict[str, Any]) -> dict[str, Any]:
-        res = self._client.post(path, json=body)
+        res = self._client.post(path, json=body, headers=self._extra_headers or None)
         res.raise_for_status()
         return res.json()
 
     def _put(self, path: str, body: dict[str, Any]) -> dict[str, Any]:
-        res = self._client.put(path, json=body)
+        res = self._client.put(path, json=body, headers=self._extra_headers or None)
         res.raise_for_status()
         return res.json()

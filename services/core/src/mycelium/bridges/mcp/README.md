@@ -34,6 +34,8 @@ Env:
 |---|---|---|
 | `MYCELIUM_CORE_URL` | `http://127.0.0.1:8787` | Core HTTP base |
 
+When the MCP client sends a recognizable model id in request `_meta` (e.g. `model`, `model_id`), the bridge forwards it to Core as `X-Mycelium-Model-Id` for Impact cost estimates. If no model is present — common in Cursor today — Core falls back to your Settings **Impact default model** (`Assumed` badge in Desktop).
+
 ## Tools
 
 | Tool | Purpose |

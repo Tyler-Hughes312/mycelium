@@ -14,6 +14,7 @@ from mycelium.bridges.mcp.formatters import (
     format_packet,
     resolve_workspace_id,
 )
+from mycelium.core.domain.impact_pricing import _PROBE_KEYS
 
 mcp = FastMCP(
     "mycelium",
@@ -45,7 +46,31 @@ mcp = FastMCP(
 
 
 def _core() -> CoreHttp:
-    return CoreHttp(os.environ.get("MYCELIUM_CORE_URL", DEFAULT_CORE_URL))
+    return CoreHttp(
+        os.environ.get("MYCELIUM_CORE_URL", DEFAULT_CORE_URL),
+        headers=_mcp_impact_headers(),
+    )
+
+
+def _mcp_impact_headers() -> dict[str, str]:
+    """Best-effort model probe from FastMCP request _meta → Core impact headers."""
+    try:
+        ctx = mcp.get_context()
+        if ctx._request_context is None:
+            return {}
+        meta = ctx.request_context.meta
+        if meta is None:
+            return {}
+        meta_dict = meta.model_dump(exclude_none=True)
+        for key in _PROBE_KEYS:
+            value = meta_dict.get(key)
+            if value:
+                headers = {"X-Mycelium-Model-Id": str(value).strip()}
+                headers["X-Mycelium-Model-Probe"] = key
+                return headers
+        return {}
+    except Exception:  # noqa: BLE001
+        return {}
 
 
 def _wid(

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import tomllib
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 CURRENT_CONFIG_VERSION = 1
@@ -51,6 +51,7 @@ client_id = ""
 [impact]
 # Local token-savings estimates for recall (search / focus / vault pack). No cloud.
 tracking_enabled = true
+default_model = "claude-sonnet-4"
 """
 
 
@@ -93,6 +94,8 @@ class GitHubSettings:
 @dataclass(frozen=True)
 class ImpactSettings:
     tracking_enabled: bool = True
+    default_model: str = "claude-sonnet-4"
+    pricing_overrides: dict[str, float] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -140,6 +143,10 @@ def _rewrite_migrated(config_file: Path, raw: dict) -> None:
     token = str(srv.get("api_token", "") or "")
     client_id = str(gh.get("client_id", "") or "").replace('"', '\\"')
     tracking = bool(impact.get("tracking_enabled", True))
+    default_model = str(impact.get("default_model", "claude-sonnet-4") or "claude-sonnet-4")
+    default_model = default_model.replace("\\", "\\\\").replace('"', '\\"')
+    overrides = _parse_pricing_overrides(impact.get("pricing_overrides"))
+    overrides_toml = _format_pricing_overrides_toml(overrides)
     text = f"""\
 # Mycelium local configuration
 # Code and Vault contents stay on this machine by default (FR-19 / AD-2).
@@ -170,7 +177,8 @@ client_id = "{client_id}"
 
 [impact]
 tracking_enabled = {"true" if tracking else "false"}
-"""
+default_model = "{default_model}"
+{overrides_toml}"""
     config_file.write_text(text, encoding="utf-8")
 
 
@@ -218,6 +226,10 @@ def load_config(home: Path | None = None) -> MyceliumConfig:
 
     model = str(emb_cfg.get("model", DEFAULT_EMBEDDING_MODEL)).strip() or DEFAULT_EMBEDDING_MODEL
     client_id = str(gh_cfg.get("client_id", "") or "").strip()
+    default_model = str(impact_cfg.get("default_model", "claude-sonnet-4") or "").strip()
+    if not default_model:
+        default_model = "claude-sonnet-4"
+    pricing_overrides = _parse_pricing_overrides(impact_cfg.get("pricing_overrides"))
 
     return MyceliumConfig(
         paths=MyceliumPaths(
@@ -239,10 +251,34 @@ def load_config(home: Path | None = None) -> MyceliumConfig:
         embedding=EmbeddingSettings(model=model),
         github=GitHubSettings(client_id=client_id),
         impact=ImpactSettings(
-            tracking_enabled=bool(impact_cfg.get("tracking_enabled", True))
+            tracking_enabled=bool(impact_cfg.get("tracking_enabled", True)),
+            default_model=default_model,
+            pricing_overrides=pricing_overrides,
         ),
         config_version=int(raw.get("config_version", CURRENT_CONFIG_VERSION)),
     )
+
+
+def _parse_pricing_overrides(raw: object) -> dict[str, float]:
+    if not isinstance(raw, dict):
+        return {}
+    out: dict[str, float] = {}
+    for key, value in raw.items():
+        try:
+            out[str(key)] = float(value)
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
+def _format_pricing_overrides_toml(overrides: dict[str, float]) -> str:
+    if not overrides:
+        return ""
+    lines = ["[impact.pricing_overrides]"]
+    for model_id, rate in sorted(overrides.items()):
+        escaped = model_id.replace("\\", "\\\\").replace('"', '\\"')
+        lines.append(f'"{escaped}" = {float(rate)}')
+    return "\n".join(lines) + "\n"
 
 
 def _path_for_toml(home: Path, path: Path) -> str:
@@ -258,6 +294,8 @@ def write_config(cfg: MyceliumConfig) -> None:
     home = cfg.paths.home
     token = cfg.server.api_token.replace("\\", "\\\\").replace('"', '\\"')
     client_id = cfg.github.client_id.replace("\\", "\\\\").replace('"', '\\"')
+    default_model = cfg.impact.default_model.replace("\\", "\\\\").replace('"', '\\"')
+    overrides_toml = _format_pricing_overrides_toml(cfg.impact.pricing_overrides)
     text = f"""\
 # Mycelium local configuration
 # Code and Vault contents stay on this machine by default (FR-19 / AD-2).
@@ -288,7 +326,8 @@ client_id = "{client_id}"
 
 [impact]
 tracking_enabled = {"true" if cfg.impact.tracking_enabled else "false"}
-"""
+default_model = "{default_model}"
+{overrides_toml}"""
     cfg.paths.config_file.write_text(text, encoding="utf-8")
     cfg.paths.data_dir.mkdir(parents=True, exist_ok=True)
     cfg.paths.vault_dir.mkdir(parents=True, exist_ok=True)
@@ -304,6 +343,8 @@ def update_config(
     allow_remote_llm: bool | None = None,
     github_client_id: str | None = None,
     impact_tracking_enabled: bool | None = None,
+    impact_default_model: str | None = None,
+    impact_pricing_overrides: dict[str, float] | None = None,
 ) -> MyceliumConfig:
     """Patch selected settings and rewrite config.toml."""
     cfg = load_config(home)
@@ -340,8 +381,28 @@ def update_config(
         new_gh = GitHubSettings(client_id=github_client_id.strip())
 
     new_impact = cfg.impact
-    if impact_tracking_enabled is not None:
-        new_impact = ImpactSettings(tracking_enabled=bool(impact_tracking_enabled))
+    if (
+        impact_tracking_enabled is not None
+        or impact_default_model is not None
+        or impact_pricing_overrides is not None
+    ):
+        new_default_model = cfg.impact.default_model
+        if impact_default_model is not None:
+            new_default_model = impact_default_model.strip() or "claude-sonnet-4"
+        new_overrides = (
+            dict(impact_pricing_overrides)
+            if impact_pricing_overrides is not None
+            else cfg.impact.pricing_overrides
+        )
+        new_impact = ImpactSettings(
+            tracking_enabled=(
+                cfg.impact.tracking_enabled
+                if impact_tracking_enabled is None
+                else bool(impact_tracking_enabled)
+            ),
+            default_model=new_default_model,
+            pricing_overrides=new_overrides,
+        )
 
     updated = MyceliumConfig(
         paths=MyceliumPaths(
@@ -373,6 +434,8 @@ def settings_dict(cfg: MyceliumConfig) -> dict:
         "allow_code_upload": cfg.network.allow_code_upload,
         "allow_remote_llm": cfg.network.allow_remote_llm,
         "impact_tracking_enabled": cfg.impact.tracking_enabled,
+        "impact_default_model": cfg.impact.default_model,
+        "impact_pricing_overrides": dict(cfg.impact.pricing_overrides),
         "api_token_enabled": bool(cfg.server.api_token),
         "github_client_id": cfg.github.client_id,
         "github_oauth_configured": bool(cfg.github.client_id),

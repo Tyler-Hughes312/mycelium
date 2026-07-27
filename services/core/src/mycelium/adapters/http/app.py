@@ -26,6 +26,7 @@ from mycelium.core.config import (
     settings_dict,
     update_config,
 )
+from mycelium.core.domain.impact_pricing import pricing_table
 from mycelium.core.domain.impact_service import ImpactService
 from mycelium.core.domain.index_service import IndexService
 from mycelium.core.domain.rag_service import RagService
@@ -95,6 +96,8 @@ class PatchSettingsRequest(BaseModel):
     allow_remote_llm: bool | None = None
     github_client_id: str | None = None
     impact_tracking_enabled: bool | None = None
+    impact_default_model: str | None = None
+    impact_pricing_overrides: dict[str, float] | None = None
 
 
 class GitHubPatRequest(BaseModel):
@@ -112,6 +115,17 @@ def _http_error(exc: WorkspaceError | GitError | VaultError | GitHubError) -> HT
         status_code=400,
         detail={"code": exc.code, "message": exc.message},
     )
+
+
+def _impact_probe(request: Request) -> dict[str, Any] | None:
+    model_id = (request.headers.get("X-Mycelium-Model-Id") or "").strip()
+    if not model_id:
+        return None
+    probe: dict[str, Any] = {"model_id": model_id}
+    probe_key = (request.headers.get("X-Mycelium-Model-Probe") or "").strip()
+    if probe_key:
+        probe[probe_key] = model_id
+    return probe
 
 
 def create_app(config: MyceliumConfig | None = None) -> FastAPI:
@@ -169,6 +183,8 @@ def create_app(config: MyceliumConfig | None = None) -> FastAPI:
         impact = ImpactService(
             ImpactStore(cfg.paths.data_dir / "impact_events.json"),
             enabled=cfg.impact.tracking_enabled,
+            default_model=cfg.impact.default_model,
+            pricing_overrides=cfg.impact.pricing_overrides,
         )
         application.state.impact_service = impact
         try:
@@ -465,7 +481,7 @@ def create_app(config: MyceliumConfig | None = None) -> FastAPI:
         return {"update": result}
 
     @application.post("/query")
-    def query(body: QueryRequest) -> dict[str, Any]:
+    def query(body: QueryRequest, request: Request) -> dict[str, Any]:
         try:
             result = rag_service().query(
                 workspace_id=body.workspace_id,
@@ -484,11 +500,12 @@ def create_app(config: MyceliumConfig | None = None) -> FastAPI:
             tool="search",
             payload=result,
             workspace_root=_workspace_root(body.workspace_id),
+            probe=_impact_probe(request),
         )
         return result
 
     @application.post("/context/focus")
-    def context_focus(body: FocusRequest) -> dict[str, Any]:
+    def context_focus(body: FocusRequest, request: Request) -> dict[str, Any]:
         try:
             result = rag_service().focus(
                 workspace_id=body.workspace_id,
@@ -508,6 +525,7 @@ def create_app(config: MyceliumConfig | None = None) -> FastAPI:
             tool="focus",
             payload=result,
             workspace_root=_workspace_root(body.workspace_id),
+            probe=_impact_probe(request),
         )
         return result
 
@@ -532,7 +550,7 @@ def create_app(config: MyceliumConfig | None = None) -> FastAPI:
         return {"scaffold": vault_service().ensure_scaffold()}
 
     @application.post("/vault/pack")
-    def vault_pack(body: PackVaultRequest) -> dict[str, Any]:
+    def vault_pack(body: PackVaultRequest, request: Request) -> dict[str, Any]:
         try:
             pack = vault_service().pack(
                 bucket=body.bucket,
@@ -541,7 +559,11 @@ def create_app(config: MyceliumConfig | None = None) -> FastAPI:
             )
         except VaultError as exc:
             raise _http_error(exc) from exc
-        impact_service().record_pack(pack=pack, max_tokens=body.max_tokens)
+        impact_service().record_pack(
+            pack=pack,
+            max_tokens=body.max_tokens,
+            probe=_impact_probe(request),
+        )
         return {"pack": pack}
 
     @application.get("/vault/notes")
@@ -629,6 +651,14 @@ def create_app(config: MyceliumConfig | None = None) -> FastAPI:
         range_name = range if range in ("today", "week", "all") else "all"
         return {"summary": impact_service().store.summary(range_name)}  # type: ignore[arg-type]
 
+    @application.get("/impact/pricing")
+    def impact_pricing() -> dict[str, Any]:
+        svc = impact_service()
+        return pricing_table(
+            default_model=svc.default_model,
+            overrides=svc.pricing_overrides,
+        )
+
     @application.get("/impact/events")
     def impact_events(limit: int = 50) -> dict[str, Any]:
         events = impact_service().store.list_events(limit)
@@ -661,6 +691,8 @@ def create_app(config: MyceliumConfig | None = None) -> FastAPI:
             allow_remote_llm=body.allow_remote_llm,
             github_client_id=body.github_client_id,
             impact_tracking_enabled=body.impact_tracking_enabled,
+            impact_default_model=body.impact_default_model,
+            impact_pricing_overrides=body.impact_pricing_overrides,
         )
         application.state.mycelium_config = updated
         application.state.github = GitHubService(
@@ -668,6 +700,10 @@ def create_app(config: MyceliumConfig | None = None) -> FastAPI:
             client_id=updated.github.client_id,
         )
         impact_service().set_enabled(updated.impact.tracking_enabled)
+        impact_service().set_pricing(
+            default_model=updated.impact.default_model,
+            pricing_overrides=updated.impact.pricing_overrides,
+        )
         # Hot-swap vault + index depth; embedding model change needs Core restart
         runtime = application.state.index_service.embedding_service.runtime
         emb_status = application.state.embedding_status
