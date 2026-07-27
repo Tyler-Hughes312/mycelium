@@ -10,15 +10,19 @@ _SYSTEM_TOKEN_CAP = 600
 
 
 def _hit_tokens(hit: dict[str, Any]) -> int:
-    if hit.get("token_est") is not None:
-        return max(0, int(hit["token_est"]))
-    return estimate_tokens(str(hit.get("snippet") or ""))
+    content_tokens = estimate_tokens(str(hit.get("snippet") or ""))
+    token_est = hit.get("token_est")
+    if token_est is not None:
+        return max(content_tokens, max(0, int(token_est)))
+    return content_tokens
 
 
 def _turn_tokens(turn: dict[str, Any]) -> int:
-    if turn.get("token_est") is not None:
-        return max(0, int(turn["token_est"]))
-    return estimate_tokens(str(turn.get("text") or ""))
+    content_tokens = estimate_tokens(str(turn.get("text") or ""))
+    token_est = turn.get("token_est")
+    if token_est is not None:
+        return max(content_tokens, max(0, int(token_est)))
+    return content_tokens
 
 
 def _truncate_to_tokens(text: str, max_tokens: int) -> tuple[str, bool]:

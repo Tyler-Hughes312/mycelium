@@ -51,3 +51,30 @@ def test_assembler_respects_hard_cap():
     )
     assert out["tokens_assembled"] <= 500
     assert out["truncated"] is True
+
+
+def test_assembler_rejects_understated_token_est_for_packing():
+    """Understated token_est must not let huge snippets slip under a tiny budget."""
+    huge = "x" * 800  # ~200 tokens via estimate_tokens
+    hits = [
+        {
+            "id": "h-under",
+            "kind": "ThreadChunk",
+            "path": "",
+            "title": "h-under",
+            "snippet": huge,
+            "score": 1.0,
+            "token_est": 0,
+            "meta": {},
+        },
+    ]
+    out = assemble_chat_prompt(
+        system_text="sys",
+        all_turns=[],
+        query_text="q",
+        thread_hits=hits,
+        code_hits=[],
+        thread_rag_budget=50,
+    )
+    assert "h-under" not in out["included_hit_ids"]
+    assert out["truncated"] is True
