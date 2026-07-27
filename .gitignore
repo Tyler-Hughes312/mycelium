@@ -67,3 +67,4 @@ services/core/packaging/dist/
 services/core/packaging/build/
 services/core/packaging/*.toc
 fixtures/dogfood-rate-limits/
+.worktrees/
