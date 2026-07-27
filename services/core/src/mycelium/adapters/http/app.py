@@ -105,6 +105,11 @@ class PatchSettingsRequest(BaseModel):
     impact_tracking_enabled: bool | None = None
     impact_default_model: str | None = None
     impact_pricing_overrides: dict[str, float] | None = None
+    llm_provider: str | None = None
+    llm_model: str | None = None
+    llm_base_url: str | None = None
+    # Write-only: stored under ~/.mycelium/llm_api_key (0600). Never returned.
+    llm_api_key: str | None = None
 
 
 class GitHubPatRequest(BaseModel):
@@ -923,6 +928,10 @@ def create_app(config: MyceliumConfig | None = None) -> FastAPI:
             impact_tracking_enabled=body.impact_tracking_enabled,
             impact_default_model=body.impact_default_model,
             impact_pricing_overrides=body.impact_pricing_overrides,
+            llm_provider=body.llm_provider,
+            llm_model=body.llm_model,
+            llm_base_url=body.llm_base_url,
+            llm_api_key=body.llm_api_key,
         )
         application.state.mycelium_config = updated
         application.state.github = GitHubService(

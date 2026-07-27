@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Mycelium Chat RAG window** — Desktop Chat + Core `/threads` assemble each model call from prefs + recent tail + ranked thread/code hits (never the full transcript). Cursor’s conversation window is not rewritten. Settings: `allow_remote_llm`, OpenAI-compatible base URL / model, API key via `MYCELIUM_LLM_API_KEY` or `~/.mycelium/llm_api_key`. Impact lists `tool=chat` savings.
 - **`docs/GETTING-STARTED.md`** — Desktop → Thinking Vault scaffold → one-command multi-agent MCP; linked from README, DESKTOP-INSTALL, MCP-CLIENTS, marketing Setup
 - Multi-client MCP install — Cursor, VS Code/Copilot, Codex, Windsurf, Claude Desktop via `scripts/install_mcp_clients.py`; matrix in `docs/MCP-CLIENTS.md`
 - Dedupes Cursor project vs user Mycelium MCP by default (one server, not two)
@@ -19,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - `install.sh` / `install_cursor_user_config.py` delegate to multi-client installer; post-install points at GETTING-STARTED
+- Design spec `docs/superpowers/specs/2026-07-27-rag-conversation-window-design.md` status → Accepted
 
 ## [0.1.3] — 2026-07-27
 

@@ -866,6 +866,8 @@ def test_settings_get_and_patch(tmp_path: Path) -> None:
         assert body["privacy"]["cloud_account_required"] is False
         assert body["history_depth"] == 500
         assert body["allow_code_upload"] is False
+        assert "llm_model" in body
+        assert body["llm_api_key_configured"] is False
 
         patched = client.patch(
             "/settings",
@@ -880,6 +882,27 @@ def test_settings_get_and_patch(tmp_path: Path) -> None:
         # Config file persisted
         reloaded = ensure_local_layout(tmp_path / "home")
         assert reloaded.index.history_depth == 250
+
+        llm_patched = client.patch(
+            "/settings",
+            json={
+                "allow_remote_llm": True,
+                "llm_model": "gpt-4o-mini",
+                "llm_base_url": "https://api.openai.com/v1",
+                "llm_api_key": "sk-test-never-commit",
+            },
+        )
+        assert llm_patched.status_code == 200
+        llm_settings = llm_patched.json()["settings"]
+        assert llm_settings["allow_remote_llm"] is True
+        assert llm_settings["llm_model"] == "gpt-4o-mini"
+        assert llm_settings["llm_base_url"] == "https://api.openai.com/v1"
+        assert llm_settings["llm_api_key_configured"] is True
+        assert "llm_api_key" not in llm_settings
+        key_path = tmp_path / "home" / "llm_api_key"
+        assert key_path.is_file()
+        assert key_path.read_text(encoding="utf-8").strip() == "sk-test-never-commit"
+        assert (key_path.stat().st_mode & 0o777) == 0o600
 
 
 def test_mcp_formatters_and_tools(tmp_path: Path) -> None:

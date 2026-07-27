@@ -59,6 +59,10 @@ Search/focus may register but will not start a full index — they hint you to c
 
 **Do not write:** every chat turn, raw transcripts, ephemeral debug dumps.
 
+## Mycelium Chat (RAG conversation window)
+
+Desktop **Chat** is optional and separate from Cursor. Each model call is assembled from system prefs + a small recent-turn tail + RAG-selected thread/code slices — **never** the full transcript. Impact records these as `tool=chat`. Enable remote LLM in Settings (`allow_remote_llm` + `MYCELIUM_LLM_API_KEY` or `~/.mycelium/llm_api_key`). Mycelium does **not** rewrite Cursor’s conversation window; curated vault handoff stays under `work/active/`, not chat dumps.
+
 ## Index freshness
 
 - Core **watches** registered workspace repos and the vault folder (watchdog).

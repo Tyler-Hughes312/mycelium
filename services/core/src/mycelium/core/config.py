@@ -400,6 +400,24 @@ api_key_file = "{llm_file}"
     cfg.paths.vault_dir.mkdir(parents=True, exist_ok=True)
 
 
+def write_llm_api_key(cfg: MyceliumConfig, api_key: str) -> Path:
+    """Write Chat LLM API key to ~/.mycelium/llm_api_key (mode 0600). Never logs the key."""
+    key = (api_key or "").strip()
+    if not key:
+        raise ValueError("api_key must be non-empty")
+    key_file = (cfg.llm.api_key_file or "llm_api_key").strip() or "llm_api_key"
+    path = Path(key_file).expanduser()
+    if not path.is_absolute():
+        path = cfg.paths.home / path
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(key + "\n", encoding="utf-8")
+    try:
+        path.chmod(0o600)
+    except OSError:
+        pass
+    return path
+
+
 def update_config(
     home: Path | None = None,
     *,
@@ -412,6 +430,10 @@ def update_config(
     impact_tracking_enabled: bool | None = None,
     impact_default_model: str | None = None,
     impact_pricing_overrides: dict[str, float] | None = None,
+    llm_provider: str | None = None,
+    llm_model: str | None = None,
+    llm_base_url: str | None = None,
+    llm_api_key: str | None = None,
 ) -> MyceliumConfig:
     """Patch selected settings and rewrite config.toml."""
     cfg = load_config(home)
@@ -471,6 +493,28 @@ def update_config(
             pricing_overrides=new_overrides,
         )
 
+    new_llm = cfg.llm
+    if llm_provider is not None or llm_model is not None or llm_base_url is not None:
+        new_llm = LlmSettings(
+            provider=(
+                llm_provider.strip()
+                if llm_provider is not None and llm_provider.strip()
+                else cfg.llm.provider
+            ),
+            model=(
+                llm_model.strip()
+                if llm_model is not None and llm_model.strip()
+                else cfg.llm.model
+            ),
+            base_url=(
+                llm_base_url.strip().rstrip("/")
+                if llm_base_url is not None and llm_base_url.strip()
+                else cfg.llm.base_url
+            ),
+            api_key_env=cfg.llm.api_key_env,
+            api_key_file=cfg.llm.api_key_file,
+        )
+
     updated = MyceliumConfig(
         paths=MyceliumPaths(
             home=root,
@@ -484,10 +528,12 @@ def update_config(
         embedding=EmbeddingSettings(model=new_model),
         github=new_gh,
         impact=new_impact,
-        llm=cfg.llm,
+        llm=new_llm,
         config_version=cfg.config_version,
     )
     write_config(updated)
+    if llm_api_key is not None and llm_api_key.strip():
+        write_llm_api_key(updated, llm_api_key)
     return load_config(root)
 
 

@@ -1,9 +1,11 @@
 # RAG conversation window — design
 
 **Date:** 2026-07-27  
-**Status:** Approved — implementation plan at `docs/superpowers/plans/2026-07-27-rag-conversation-window.md`  
+**Status:** Accepted  
 **Product:** Mycelium — local-first context layer  
 **Related:** [[2026-07-27-context-receipts-design]], [[2026-07-27-agent-context-tools-design]], [[docs/POSITIONING]], ADR codebase-index-over-chat-memory
+
+Implementation plan: `docs/superpowers/plans/2026-07-27-rag-conversation-window.md`
 
 ## Goal
 

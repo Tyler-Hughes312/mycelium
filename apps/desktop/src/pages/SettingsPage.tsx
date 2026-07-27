@@ -74,6 +74,13 @@ export function SettingsPage() {
   const [impactPricing, setImpactPricing] = useState<ImpactPricing | null>(null);
   const [impactDefaultModel, setImpactDefaultModel] = useState("claude-sonnet-4");
   const [impactRates, setImpactRates] = useState<Record<string, number>>({});
+  const [allowRemoteLlm, setAllowRemoteLlm] = useState(false);
+  const [llmBaseUrl, setLlmBaseUrl] = useState("https://api.openai.com/v1");
+  const [llmModel, setLlmModel] = useState("gpt-4o-mini");
+  const [llmApiKey, setLlmApiKey] = useState("");
+  const [llmKeyConfigured, setLlmKeyConfigured] = useState(false);
+  const [llmKeyEnv, setLlmKeyEnv] = useState("MYCELIUM_LLM_API_KEY");
+  const [savingLlm, setSavingLlm] = useState(false);
   const [github, setGithub] = useState<GitHubStatus | null>(null);
   const [pat, setPat] = useState("");
   const [deviceCode, setDeviceCode] = useState<string | null>(null);
@@ -110,6 +117,11 @@ export function SettingsPage() {
         setModel(data.settings.embedding_model);
         setGithubClientId(data.settings.github_client_id ?? "");
         setImpactTracking(data.settings.impact_tracking_enabled !== false);
+        setAllowRemoteLlm(data.settings.allow_remote_llm === true);
+        setLlmBaseUrl(data.settings.llm_base_url ?? "https://api.openai.com/v1");
+        setLlmModel(data.settings.llm_model ?? "gpt-4o-mini");
+        setLlmKeyConfigured(data.settings.llm_api_key_configured === true);
+        setLlmKeyEnv(data.settings.llm_api_key_env ?? "MYCELIUM_LLM_API_KEY");
         applyImpactPricingDraft(pricing);
         if (data.github) setGithub(data.github);
         else await refreshGitHub();
@@ -195,6 +207,35 @@ export function SettingsPage() {
     await refreshGitHub();
   }
 
+  async function onSaveLlm() {
+    setSavingLlm(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const payload: Parameters<typeof patchSettings>[0] = {
+        allow_remote_llm: allowRemoteLlm,
+        llm_base_url: llmBaseUrl.trim() || "https://api.openai.com/v1",
+        llm_model: llmModel.trim() || "gpt-4o-mini",
+      };
+      if (llmApiKey.trim()) {
+        payload.llm_api_key = llmApiKey.trim();
+      }
+      const res = await patchSettings(payload);
+      setSettings(res.settings);
+      setAllowRemoteLlm(res.settings.allow_remote_llm === true);
+      setLlmBaseUrl(res.settings.llm_base_url ?? llmBaseUrl);
+      setLlmModel(res.settings.llm_model ?? llmModel);
+      setLlmKeyConfigured(res.settings.llm_api_key_configured === true);
+      setLlmKeyEnv(res.settings.llm_api_key_env ?? "MYCELIUM_LLM_API_KEY");
+      setLlmApiKey("");
+      setMessage("Chat LLM settings saved.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Chat LLM save failed");
+    } finally {
+      setSavingLlm(false);
+    }
+  }
+
   async function onSaveImpactPricing() {
     setSavingImpact(true);
     setError(null);
@@ -265,7 +306,7 @@ export function SettingsPage() {
             </p>
             <p className="font-technical-mono-sm text-technical-mono-sm text-muted mt-2">
               allow_code_upload={String(settings?.allow_code_upload ?? false)} ·
-              allow_remote_llm={String(settings?.allow_remote_llm ?? false)} ·
+              allow_remote_llm={String(allowRemoteLlm)} ·
               impact_tracking={String(impactTracking)} ·
               api_token={settings?.api_token_enabled ? "on" : "off"} ·
               config_version={settings?.config_version ?? "—"}
@@ -419,6 +460,136 @@ export function SettingsPage() {
         {message && (
           <p className="font-body-sm text-body-sm text-primary">{message}</p>
         )}
+
+        <section className="space-y-lg">
+          <h3 className="font-label-caps text-label-caps text-on-surface-variant border-b border-border pb-xs uppercase tracking-widest">
+            Mycelium Chat LLM
+          </h3>
+          <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+            Opt-in remote completions for Desktop Chat. Each turn uses a RAG
+            window (prefs + recent tail + ranked hits) — never the full
+            transcript. Cursor&apos;s conversation window is not rewritten.
+          </p>
+
+          <label className="flex items-start gap-sm font-body-sm text-body-sm text-on-surface cursor-pointer">
+            <input
+              type="checkbox"
+              checked={allowRemoteLlm}
+              onChange={(e) => setAllowRemoteLlm(e.target.checked)}
+              className="mt-0.5 accent-[var(--color-primary,#00d1b2)]"
+            />
+            <span>
+              <span className="font-label-md text-label-md text-on-surface block">
+                Allow remote LLM for Chat
+              </span>
+              <span className="text-on-surface-variant">
+                Required with an API key before Chat can call a provider
+                (<code className="font-technical-mono-sm text-technical-mono-sm text-primary">
+                  allow_remote_llm
+                </code>
+                ).
+              </span>
+            </span>
+          </label>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-md items-start">
+            <div className="md:col-span-1 pt-sm">
+              <label
+                htmlFor="llm-base-url"
+                className="font-label-md text-label-md text-foreground block"
+              >
+                Base URL
+              </label>
+            </div>
+            <div className="md:col-span-3">
+              <input
+                id="llm-base-url"
+                className="w-full bg-surface-container border border-border rounded-lg h-10 px-md font-technical-mono text-technical-mono text-foreground focus:outline-none focus:border-primary"
+                type="url"
+                value={llmBaseUrl}
+                onChange={(e) => setLlmBaseUrl(e.target.value)}
+                placeholder="https://api.openai.com/v1"
+              />
+              <p className="font-technical-mono-sm text-technical-mono-sm text-muted mt-xs">
+                OpenAI-compatible{" "}
+                <code className="text-primary">/chat/completions</code> endpoint.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-md items-start">
+            <div className="md:col-span-1 pt-sm">
+              <label
+                htmlFor="llm-model"
+                className="font-label-md text-label-md text-foreground block"
+              >
+                Model
+              </label>
+            </div>
+            <div className="md:col-span-3">
+              <input
+                id="llm-model"
+                className="w-full max-w-md bg-surface-container border border-border rounded-lg h-10 px-md font-technical-mono text-technical-mono text-foreground focus:outline-none focus:border-primary"
+                type="text"
+                value={llmModel}
+                onChange={(e) => setLlmModel(e.target.value)}
+                placeholder="gpt-4o-mini"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-md items-start">
+            <div className="md:col-span-1 pt-sm">
+              <label
+                htmlFor="llm-api-key"
+                className="font-label-md text-label-md text-foreground block"
+              >
+                API key
+              </label>
+            </div>
+            <div className="md:col-span-3 space-y-sm">
+              <input
+                id="llm-api-key"
+                className="w-full bg-surface-container border border-border rounded-lg h-10 px-md font-technical-mono text-technical-mono text-foreground focus:outline-none focus:border-primary"
+                type="password"
+                value={llmApiKey}
+                onChange={(e) => setLlmApiKey(e.target.value)}
+                placeholder={
+                  llmKeyConfigured
+                    ? "•••••••• (leave blank to keep)"
+                    : "sk-… (optional if env is set)"
+                }
+                autoComplete="off"
+              />
+              <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+                Prefer env{" "}
+                <code className="font-technical-mono-sm text-technical-mono-sm text-primary">
+                  {llmKeyEnv}
+                </code>
+                . Otherwise Mycelium writes{" "}
+                <code className="font-technical-mono-sm text-technical-mono-sm text-primary">
+                  ~/.mycelium/llm_api_key
+                </code>{" "}
+                (mode 0600). Keys are never returned by the API or committed.
+              </p>
+              <p className="font-technical-mono-sm text-technical-mono-sm text-muted">
+                Key status: {llmKeyConfigured ? "configured" : "not configured"}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              type="button"
+              disabled={savingLlm || !settings}
+              onClick={() => void onSaveLlm()}
+              className="px-xl h-10 rounded-xl bg-primary text-on-primary font-label-md text-label-md hover:brightness-110 transition-all duration-150 flex items-center gap-sm disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-[18px]">save</span>
+              {savingLlm ? "Saving…" : "Save Chat LLM"}
+            </button>
+          </div>
+        </section>
 
         <section className="space-y-lg">
           <h3 className="font-label-caps text-label-caps text-on-surface-variant border-b border-border pb-xs uppercase tracking-widest">

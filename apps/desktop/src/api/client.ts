@@ -347,6 +347,12 @@ export type AppSettings = {
   impact_tracking_enabled?: boolean;
   impact_default_model?: string;
   impact_pricing_overrides?: Record<string, number>;
+  llm_provider?: string;
+  llm_model?: string;
+  llm_base_url?: string;
+  llm_api_key_env?: string;
+  /** True when MYCELIUM_LLM_API_KEY or ~/.mycelium/llm_api_key is set. Never returns the key. */
+  llm_api_key_configured?: boolean;
   api_token_enabled?: boolean;
   github_client_id?: string;
   github_oauth_configured?: boolean;
@@ -399,6 +405,11 @@ export async function patchSettings(input: {
   impact_tracking_enabled?: boolean;
   impact_default_model?: string;
   impact_pricing_overrides?: Record<string, number>;
+  llm_provider?: string;
+  llm_model?: string;
+  llm_base_url?: string;
+  /** Write-only; stored as ~/.mycelium/llm_api_key (0600). Prefer env MYCELIUM_LLM_API_KEY. */
+  llm_api_key?: string;
 }) {
   return request<{
     settings: AppSettings;

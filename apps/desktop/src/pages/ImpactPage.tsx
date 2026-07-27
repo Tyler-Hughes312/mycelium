@@ -20,10 +20,15 @@ const RANGES: { id: Range; label: string }[] = [
 ];
 
 const IMPACT_DISCLAIMER =
-  "Estimated vs dumping matched files into the model context. Uses API list prices you can edit in Settings — not Cursor subscription billing. When Cursor does not send a model id, Mycelium uses your Impact default model and labels it Assumed.";
+  "Estimated vs dumping matched files or a full chat transcript into the model context. Uses API list prices you can edit in Settings — not Cursor subscription billing. When Cursor does not send a model id, Mycelium uses your Impact default model and labels it Assumed. Chat turns (tool=chat) count RAG-window savings vs a full-thread baseline.";
 
 function formatTokens(n: number) {
   return n.toLocaleString();
+}
+
+function toolLabel(tool: string) {
+  if (tool === "chat") return "Chat";
+  return tool;
 }
 
 export function formatUsd(amount: number) {
@@ -183,8 +188,9 @@ export function ImpactPage() {
           </h1>
           <p className="font-body-sm text-body-sm text-on-surface-variant max-w-2xl">
             Estimated tokens and API list-price savings from serving tight recall
-            packets instead of dumping matched files or filling a vault pack
-            ceiling. Counts stay on this machine under{" "}
+            packets — Search, Focus, Vault pack, and Mycelium Chat turns —
+            instead of dumping matched files or replaying a full transcript.
+            Counts stay on this machine under{" "}
             <code className="font-technical-mono-sm text-technical-mono-sm text-primary">
               ~/.mycelium/data
             </code>
@@ -239,8 +245,12 @@ export function ImpactPage() {
               No impact events yet
             </p>
             <p className="font-body-sm text-body-sm text-on-surface-variant max-w-lg">
-              Use Desktop Search, Focus via MCP, or Vault pack — Core will log
-              estimated savings here after each recall.
+              Use Desktop Search, Focus via MCP, Vault pack, or Mycelium Chat —
+              Core will log estimated savings here after each recall (including{" "}
+              <code className="font-technical-mono-sm text-technical-mono-sm text-primary">
+                tool=chat
+              </code>{" "}
+              turns).
             </p>
           </section>
         ) : summary ? (
@@ -314,7 +324,7 @@ export function ImpactPage() {
                   {byTool.map((row: ImpactByTool) => (
                     <BreakdownRow
                       key={row.tool}
-                      title={row.tool}
+                      title={toolLabel(row.tool)}
                       eventCount={row.event_count}
                       tokensSaved={row.tokens_saved}
                       usdSaved={row.usd_saved ?? 0}
@@ -386,7 +396,7 @@ export function ImpactPage() {
                 >
                   <div className="min-w-0">
                     <p className="font-label-md text-label-md text-on-surface flex flex-wrap items-center gap-sm">
-                      <span>{ev.tool}</span>
+                      <span>{toolLabel(ev.tool)}</span>
                       {(ev.model_id || ev.model_source) && (
                         <>
                           <span className="font-technical-mono-sm text-technical-mono-sm text-muted">
