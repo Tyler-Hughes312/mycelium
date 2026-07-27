@@ -7,12 +7,20 @@ alwaysApply: true
 
 Mycelium MCP talks to local Core (`http://127.0.0.1:8787`). **Call these tools when helpful — do not wait to be asked.** Do not invent vault/code paths the tools did not return.
 
+## Hard hooks (required)
+
+1. At the start of meaningful coding work: call `mycelium_session_start` (or `mycelium_preflight`) with this repo’s absolute `workspace_path`. You get a **compact** bootstrap + a one-line `receipt=…` — not a vault dump.
+2. Before broad exploration (`rg`, globbing many files, reading large trees): call `mycelium_search` / `mycelium_focus` / `mycelium_change_context` / `mycelium_debug_context` first. **Cite the receipt**; do not re-fetch full vault/code.
+3. Prefer `mycelium_change_context(goal=…)` for implement/change work; `mycelium_debug_context(error=…)` when fixing. Use `mycelium_verify_receipt` to check staleness (paths/titles only).
+4. Do **not** dump chat transcripts into the vault. Do **not** paste entire files when a receipt already lists the hits.
+
 ## Read (cheap first)
 
-1. `mycelium_vault_tree`
-2. `mycelium_vault_pack` (bucket or whole vault)
-3. `mycelium_get_note` only if you need one full body
-4. `mycelium_search` / `mycelium_focus` / `mycelium_commits_for_path` for semantic or file-local recall
+1. `mycelium_session_start` / `mycelium_preflight` (session bootstrap)
+2. `mycelium_vault_tree`
+3. `mycelium_vault_pack` (bucket or whole vault)
+4. `mycelium_get_note` only if you need one full body
+5. `mycelium_search` / `mycelium_focus` / `mycelium_commits_for_path` for semantic or file-local recall
 
 ## Write (when necessary)
 
@@ -24,15 +32,15 @@ Capture **durable** knowledge into the Thinking Vault:
 - `mycelium_create_note` / `mycelium_update_note` with markdown + `[[wikilinks]]`
 - Optional `link_symbol` (e.g. `path#symbol`) when tying a note to code
 
-**Do not** write every chat turn or dump transcripts. Skip ephemeral debugging noise.
+**Do not write:** every chat turn, raw transcripts, ephemeral debug dumps.
 
 ## Rules of thumb
 
 - Discover tools with GetMcpTools on that server before CallMcpTool if schema unknown.
 - Prefer Mycelium over guessing vault contents or inventing paths that tools did not return.
 - If Core is offline, say so briefly and continue without inventing context.
-- Index stays fresh: search/focus auto-sync dirty files; vault writes re-embed; use `mycelium_sync_index` after large code batches.
-- Pass `workspace_path` for this repo when multiple workspaces exist.
+- Index freshness: search/focus auto-sync dirty files; vault writes re-embed; use `mycelium_sync_index` after large code batches.
+- Pass `workspace_path` for this repo when multiple workspaces exist — unknown paths **auto-register**; full index starts from `mycelium_session_start` only.
 
 ## Setup
 

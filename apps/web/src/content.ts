@@ -15,16 +15,16 @@ export const LINKS = {
 export const HERO = {
   brand: "Mycelium",
   headline: "Stop burning tokens re-reading your codebase every session",
-  sub: "Mycelium indexes your repos locally — symbols, files, commits — and returns a precise context packet when Cursor or Claude asks. Not a chat journal: an efficient path into the code you already have.",
-  proof: "Fewer tokens · Faster than re-grep · Private on localhost",
+  sub: "Mycelium indexes your repos locally and returns a precise context packet — then a one-line receipt so agents cite what they already retrieved instead of dumping the tree again. Not a chat journal: an efficient path into the code you already have.",
+  proof: "Tight packets · Context receipts · Grounded Impact · Private on localhost",
   primaryCta: "Download Desktop",
   secondaryCta: "See how it saves tokens",
 } as const;
 
 export const OUTCOMES_INTRO = {
   eyebrow: "Why it exists",
-  headline: "Indexed code retrieval — not another memory diary",
-  sub: "Agent “memory vaults” remember conversations. Mycelium indexes your project structure and returns the slices that answer the question — so you can show tokens saved, not vague persistence.",
+  headline: "Proof-carrying retrieval — not another memory diary",
+  sub: "Agent “memory vaults” remember conversations. Mycelium indexes your project, serves only the slices that answer the question, and attaches a compact receipt — so agents stay grounded without stuffing more context into the window.",
 } as const;
 
 export type Outcome = {
@@ -37,27 +37,27 @@ export const OUTCOMES: Outcome[] = [
   {
     id: "tokens",
     title: "Spend tokens on the answer, not the haystack",
-    body: "Hybrid search + focus packets pull the matching symbols, commits, and notes — instead of re-pasting giant files or re-searching the tree every chat.",
+    body: "Hybrid search + focus packets pull matching symbols, commits, and notes — instead of re-pasting giant files or re-searching the tree every chat.",
   },
   {
     id: "quality",
-    title: "A precise path into your real codebase",
-    body: "Retrieval is optimized for project structure and files: naming, error handling, rate-limit fixes you already shipped — not a transcript of last week’s chat.",
+    title: "Session bootstrap for agents",
+    body: "mycelium_session_start auto-registers the repo, optionally indexes, and returns a compact prefs + open-file packet — not a vault dump or chat transcript.",
   },
   {
     id: "reuse",
-    title: "Reuse code across projects",
-    body: "Import multiple repos into Library. When you start something new, Search still finds the auth helper, fixture, or ADR you wrote last quarter — without grepping by hand.",
+    title: "Task-shaped context, not raw search lists",
+    body: "change_context and debug_context return ranked hits for implement vs fix — so agents pick the right tool instead of grepping forever.",
   },
   {
     id: "scale",
-    title: "Stay oriented in large codebases",
-    body: "Index once, recall by meaning and structure. Navigate monorepos and long histories without re-explaining the architecture in every thread.",
+    title: "Cite a receipt — don’t re-dump the repo",
+    body: "Every recall ends with a one-line receipt (paths/ids only). verify_receipt checks staleness without pasting bodies. Impact tracks grounded %.",
   },
   {
     id: "local",
     title: "Private by default",
-    body: "Indexes (and an optional Thinking Vault for decisions) live on your machine. Desktop and MCP start Core locally — nothing leaves localhost unless you opt in.",
+    body: "Indexes, receipts, and an optional Thinking Vault live on your machine. Desktop and MCP start Core locally — nothing leaves localhost unless you opt in.",
   },
 ];
 
@@ -68,14 +68,14 @@ export const OUTCOMES_COMPARE = {
   without: [
     "Re-paste the same files every session",
     "Burn tokens re-reading half the repo",
-    "Re-grep for last month’s fix in another tree",
+    "Agents grep blindly with no shared world model",
     "Generic answers that ignore your conventions",
   ],
   with: [
     "One indexed path to the relevant slice",
-    "Tight packets — measure tokens saved",
-    "Reuse symbols and commits across Library",
-    "Outputs grounded in how you already ship",
+    "Tight packets + one-line receipts",
+    "Session bootstrap + task-shaped tools",
+    "Impact: tokens saved and grounded %",
   ],
 } as const;
 
@@ -102,7 +102,7 @@ export const CAPABILITIES: Capability[] = [
   {
     id: "search",
     title: "Search",
-    body: "Hybrid recall: a precise packet of symbols, commits, and files that match the question.",
+    body: "Hybrid recall: a precise packet of symbols, commits, and files — plus a compact receipt to cite.",
     wash: "violet",
   },
   {
@@ -114,7 +114,7 @@ export const CAPABILITIES: Capability[] = [
   {
     id: "agents",
     title: "Agents",
-    body: "MCP tools for Cursor / Claude — agents get indexed context on demand instead of re-scanning the tree.",
+    body: "MCP: session_start, change/debug context, receipts — agents get relevant packets, not another window dump.",
     wash: "amber",
   },
 ];
@@ -133,14 +133,14 @@ export const SETUP_STEPS = [
   {
     n: 3,
     title: "Use",
-    body: "Add a repo in Library, Index it, then Search — agents pull tight context packets through MCP instead of re-pasting files.",
+    body: "Call session_start on your repo, then change_context or search — cite the receipt instead of re-pasting files. Watch grounded % on Desktop Impact.",
   },
 ] as const;
 
 export const IMPACT_INTRO = {
   eyebrow: "Impact",
-  headline: "Token efficiency you can measure",
-  sub: "The pitch is concrete: stop burning context on re-reads and greps. Mycelium serves an indexed packet — Desktop Impact tracks estimated tokens saved vs dumping matched files.",
+  headline: "Token efficiency you can measure — and prove",
+  sub: "Stop burning context on re-reads and greps. Mycelium serves an indexed packet with a receipt. Desktop Impact tracks estimated tokens saved and how often recalls were grounded.",
 } as const;
 
 export type ImpactMetric = {
@@ -159,9 +159,9 @@ export const IMPACT_METRICS: ImpactMetric[] = [
   },
   {
     id: "packet",
-    stat: "1 packet",
-    title: "Per question",
-    body: "Symbols, commits, and files that match the ask — a precise path into the repo, not half of it pasted again.",
+    stat: "1 receipt",
+    title: "Per recall",
+    body: "A one-line attestation of which hits were served — cite it instead of pasting bodies again.",
   },
   {
     id: "reuse",
@@ -171,11 +171,11 @@ export const IMPACT_METRICS: ImpactMetric[] = [
   },
   {
     id: "grounded",
-    stat: "Your patterns",
-    title: "Codebase-grounded answers",
-    body: "Retrieval is about project structure and shipped code — stronger to demo than vague “the agent remembers.”",
+    stat: "Grounded %",
+    title: "Receipt-backed recalls",
+    body: "Desktop Impact shows how often agents used Mycelium packets with a receipt vs flying blind.",
   },
 ];
 
 export const IMPACT_DISCLAIMER =
-  "The ~60–90% figure is illustrative of typical focus/search vs paste-the-file sessions. Desktop Impact tracks live estimated savings locally (served packet vs baseline file dump) — not LLM billing accuracy, and not yet a published customer benchmark.";
+  "The ~60–90% figure is illustrative of typical focus/search vs paste-the-file sessions. Desktop Impact tracks live estimated savings and grounded (receipt) rate locally — not LLM billing accuracy, and not yet a published customer benchmark.";

@@ -60,6 +60,7 @@ class ImpactStore:
 
         served = baseline = saved = count = 0
         usd_saved_total = 0.0
+        grounded = ungrounded = 0
         by_tool: dict[str, dict[str, Any]] = {}
         by_model: dict[str, dict[str, Any]] = {}
         for ev in self._load():
@@ -73,6 +74,10 @@ class ImpactStore:
             if start is not None and ts < start:
                 continue
             count += 1
+            if ev.get("grounded") or ev.get("receipt_id"):
+                grounded += 1
+            else:
+                ungrounded += 1
             ev_served = int(ev.get("served_tokens") or 0)
             ev_baseline = int(ev.get("baseline_tokens") or 0)
             ev_saved = int(ev.get("tokens_saved") or 0)
@@ -110,6 +115,7 @@ class ImpactStore:
             source_counts[source] = int(source_counts.get(source, 0)) + 1
 
         pct = round((saved / baseline) * 100, 1) if baseline > 0 else 0.0
+        grounded_pct = round((grounded / count) * 100, 1) if count > 0 else 0.0
         by_tool_list = sorted(
             by_tool.values(), key=lambda row: row["tokens_saved"], reverse=True
         )
@@ -134,6 +140,9 @@ class ImpactStore:
             "tokens_saved": saved,
             "savings_pct": pct,
             "usd_saved": usd_saved_total,
+            "grounded_events": grounded,
+            "ungrounded_events": ungrounded,
+            "grounded_pct": grounded_pct,
             "by_tool": by_tool_list,
             "by_model": by_model_list,
         }

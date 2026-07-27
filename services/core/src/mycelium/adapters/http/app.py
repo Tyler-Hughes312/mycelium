@@ -20,17 +20,19 @@ from mycelium.adapters.github import GitHubError, GitHubService
 from mycelium.adapters.store import JsonFileWorkspaceRepo, WorkspaceError
 from mycelium.adapters.store.impact_store import ImpactStore
 from mycelium.adapters.vault import VaultError
+from mycelium.adapters.git.files import git_head
 from mycelium.core.config import (
     MyceliumConfig,
     ensure_local_layout,
     settings_dict,
     update_config,
 )
+from mycelium.core.domain.context_receipt import ReceiptStore, mint_receipt
 from mycelium.core.domain.impact_pricing import pricing_table
 from mycelium.core.domain.impact_service import ImpactService
 from mycelium.core.domain.index_service import IndexService
 from mycelium.core.domain.rag_service import RagService
-from mycelium.core.domain.vault_service import VaultService
+from mycelium.core.domain.vault_service import VaultService, estimate_tokens
 from mycelium.core.logging import setup_logging
 from mycelium.core.privacy import PrivacyError
 
@@ -187,6 +189,9 @@ def create_app(config: MyceliumConfig | None = None) -> FastAPI:
             pricing_overrides=cfg.impact.pricing_overrides,
         )
         application.state.impact_service = impact
+        application.state.receipt_store = ReceiptStore(
+            cfg.paths.data_dir / "context_receipts.json"
+        )
         try:
             yield
         finally:
@@ -277,6 +282,9 @@ def create_app(config: MyceliumConfig | None = None) -> FastAPI:
     def impact_service() -> ImpactService:
         return application.state.impact_service
 
+    def receipt_store() -> ReceiptStore:
+        return application.state.receipt_store
+
     def watchers() -> WorkspaceWatcherManager:
         return application.state.watchers
 
@@ -290,6 +298,44 @@ def create_app(config: MyceliumConfig | None = None) -> FastAPI:
         if not raw:
             return None
         return Path(raw)
+
+    def _workspace_head(workspace_id: str | None) -> str:
+        root = _workspace_root(workspace_id)
+        if root is None:
+            return ""
+        return git_head(root) or ""
+
+    def _attach_receipt(
+        *,
+        tool: str,
+        payload: dict[str, Any],
+        query: str = "",
+        served_tokens: int = 0,
+    ) -> dict[str, Any]:
+        """Mint compact receipt (ids/paths only) and attach public slice to payload."""
+        wid = str(payload.get("workspace_id") or "")
+        results = list(payload.get("results") or [])
+        if tool == "vault_pack":
+            # Pack has no RAG results — receipt cites pack meta only
+            results = [
+                {
+                    "id": f"pack:{payload.get('bucket') or 'vault'}",
+                    "path": str(payload.get("bucket") or "vault"),
+                    "kind": "Pack",
+                    "title": f"vault pack ≤{payload.get('max_tokens', '')}",
+                }
+            ]
+        receipt = mint_receipt(
+            tool=tool,
+            workspace_id=wid if wid not in ("*", "all") else "",
+            head=_workspace_head(wid if wid not in ("*", "all") else None),
+            results=results,
+            query=query,
+            served_tokens=served_tokens,
+        )
+        public = receipt_store().put(receipt)
+        payload["receipt"] = public
+        return receipt
 
     @application.get("/health")
     def health() -> dict[str, Any]:
@@ -496,11 +542,26 @@ def create_app(config: MyceliumConfig | None = None) -> FastAPI:
                     detail={"code": exc.code, "message": exc.message},
                 ) from exc
             raise _http_error(exc) from exc
+        snippets = [
+            str(r.get("snippet") or "")
+            for r in (result.get("results") or [])
+            if isinstance(r, dict)
+        ]
+        served = estimate_tokens("\n".join(snippets)) if snippets else 0
+        receipt = _attach_receipt(
+            tool="search",
+            payload=result,
+            query=body.query,
+            served_tokens=served,
+        )
         impact_service().record_search_or_focus(
             tool="search",
             payload=result,
-            workspace_root=_workspace_root(body.workspace_id),
+            workspace_root=_workspace_root(
+                body.workspace_id if body.workspace_id not in ("*", "all") else None
+            ),
             probe=_impact_probe(request),
+            receipt_id=str(receipt.get("id") or ""),
         )
         return result
 
@@ -521,11 +582,24 @@ def create_app(config: MyceliumConfig | None = None) -> FastAPI:
                     detail={"code": exc.code, "message": exc.message},
                 ) from exc
             raise _http_error(exc) from exc
+        snippets = [
+            str(r.get("snippet") or "")
+            for r in (result.get("results") or [])
+            if isinstance(r, dict)
+        ]
+        served = estimate_tokens("\n".join(snippets)) if snippets else 0
+        receipt = _attach_receipt(
+            tool="focus",
+            payload=result,
+            query=f"{body.path}#{body.symbol or ''}",
+            served_tokens=served,
+        )
         impact_service().record_search_or_focus(
             tool="focus",
             payload=result,
             workspace_root=_workspace_root(body.workspace_id),
             probe=_impact_probe(request),
+            receipt_id=str(receipt.get("id") or ""),
         )
         return result
 
@@ -559,12 +633,53 @@ def create_app(config: MyceliumConfig | None = None) -> FastAPI:
             )
         except VaultError as exc:
             raise _http_error(exc) from exc
+        pack_payload = {
+            "workspace_id": "",
+            "results": [],
+            "bucket": body.bucket,
+            "max_tokens": body.max_tokens,
+            "tokens_est": pack.get("tokens_est"),
+        }
+        receipt = _attach_receipt(
+            tool="vault_pack",
+            payload=pack_payload,
+            query=str(body.bucket or "vault"),
+            served_tokens=int(pack.get("tokens_est") or 0),
+        )
+        pack["receipt"] = pack_payload.get("receipt")
         impact_service().record_pack(
             pack=pack,
             max_tokens=body.max_tokens,
             probe=_impact_probe(request),
+            receipt_id=str(receipt.get("id") or ""),
         )
         return {"pack": pack}
+
+    @application.get("/context/receipts/{receipt_id}")
+    def get_receipt(receipt_id: str) -> dict[str, Any]:
+        row = receipt_store().get(receipt_id)
+        if not row:
+            raise HTTPException(
+                status_code=404,
+                detail={"code": "not_found", "message": f"Unknown receipt: {receipt_id}"},
+            )
+        current = _workspace_head(str(row.get("workspace_id") or "") or None)
+        stored = str(row.get("head") or "")
+        status = "valid" if stored and stored == current else ("stale" if stored else "unknown")
+        # Return compact verify payload — no snippet/bodies
+        return {
+            "receipt": {
+                "id": row.get("id"),
+                "status": status,
+                "tool": row.get("tool"),
+                "workspace_id": row.get("workspace_id"),
+                "head": stored,
+                "head_now": current,
+                "item_count": row.get("item_count"),
+                "served_tokens": row.get("served_tokens"),
+                "items": row.get("items") or [],
+            }
+        }
 
     @application.get("/vault/notes")
     def list_notes() -> dict[str, Any]:

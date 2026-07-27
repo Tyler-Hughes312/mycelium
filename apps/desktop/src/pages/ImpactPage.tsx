@@ -244,7 +244,7 @@ export function ImpactPage() {
             </p>
           </section>
         ) : summary ? (
-          <section className="grid gap-md sm:grid-cols-2 lg:grid-cols-4">
+          <section className="grid gap-md sm:grid-cols-2 lg:grid-cols-5">
             <div className="rounded-xl border border-border bg-surface-container-lowest px-md py-md">
               <p className="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest">
                 Tokens saved
@@ -277,13 +277,26 @@ export function ImpactPage() {
                 {formatTokens(summary.event_count)}
               </p>
             </div>
+            <div className="rounded-xl border border-border bg-surface-container-lowest px-md py-md">
+              <p className="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest">
+                Grounded
+              </p>
+              <p className="mt-sm font-display text-[32px] text-on-surface tracking-tight">
+                {summary.grounded_pct ?? 0}%
+              </p>
+              <p className="mt-xs font-technical-mono-sm text-technical-mono-sm text-muted">
+                {summary.grounded_events ?? 0} with receipt ·{" "}
+                {summary.ungrounded_events ?? 0} without
+              </p>
+            </div>
           </section>
         ) : null}
 
         <p className="font-technical-mono-sm text-technical-mono-sm text-muted">
           Estimated vs dumping matched files / pack ceiling · served{" "}
           {formatTokens(summary?.served_tokens ?? 0)} · baseline{" "}
-          {formatTokens(summary?.baseline_tokens ?? 0)}
+          {formatTokens(summary?.baseline_tokens ?? 0)} · receipts prove
+          relevant-only context (not more dump)
         </p>
 
         {summary && summary.event_count > 0 ? (

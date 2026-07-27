@@ -39,6 +39,15 @@ class CoreHttp:
     def list_workspaces(self) -> list[dict[str, Any]]:
         return list(self._get("/workspaces").get("workspaces") or [])
 
+    def register_workspace(self, path: str) -> dict[str, Any]:
+        return self._post("/workspaces", {"path": path}).get("workspace") or {}
+
+    def start_index(self, workspace_id: str) -> dict[str, Any]:
+        return self._post(f"/workspaces/{workspace_id}/index", {}).get("status") or {}
+
+    def index_status(self, workspace_id: str) -> dict[str, Any]:
+        return self._get(f"/workspaces/{workspace_id}/index/status").get("status") or {}
+
     def query(
         self,
         *,
@@ -146,6 +155,11 @@ class CoreHttp:
         if bucket:
             body["bucket"] = bucket
         return self._post("/vault/pack", body).get("pack") or {}
+
+    def get_receipt(self, receipt_id: str) -> dict[str, Any]:
+        from urllib.parse import quote
+
+        return self._get(f"/context/receipts/{quote(receipt_id, safe='')}").get("receipt") or {}
 
     def list_commits(self, workspace_id: str, *, limit: int = 50) -> list[dict[str, Any]]:
         return list(

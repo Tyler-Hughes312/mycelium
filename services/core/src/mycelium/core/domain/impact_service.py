@@ -78,6 +78,7 @@ class ImpactService:
         baseline: int,
         saved: int,
         probe: dict | None = None,
+        receipt_id: str | None = None,
     ) -> None:
         if not self.enabled:
             return
@@ -90,21 +91,23 @@ class ImpactService:
             tokens_saved=saved,
             usd_per_1m_input=usd_per_1m_input,
         )
-        self.store.append(
-            {
-                "ts": datetime.now(timezone.utc).isoformat(),
-                "tool": tool,
-                "workspace_id": workspace_id or "",
-                "served_tokens": served,
-                "baseline_tokens": baseline,
-                "tokens_saved": saved,
-                "model_id": model_id,
-                "model_source": model_source,
-                "model_probe": model_probe,
-                "usd_per_1m_input": usd_per_1m_input,
-                "usd_saved": usd_saved,
-            }
-        )
+        event: dict[str, Any] = {
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "tool": tool,
+            "workspace_id": workspace_id or "",
+            "served_tokens": served,
+            "baseline_tokens": baseline,
+            "tokens_saved": saved,
+            "model_id": model_id,
+            "model_source": model_source,
+            "model_probe": model_probe,
+            "usd_per_1m_input": usd_per_1m_input,
+            "usd_saved": usd_saved,
+            "grounded": bool(receipt_id),
+        }
+        if receipt_id:
+            event["receipt_id"] = receipt_id
+        self.store.append(event)
 
     def record_pack(
         self,
@@ -113,6 +116,7 @@ class ImpactService:
         max_tokens: int,
         workspace_id: str | None = None,
         probe: dict | None = None,
+        receipt_id: str | None = None,
     ) -> None:
         served, baseline, saved = estimate_pack_impact(
             tokens_est=int(pack.get("tokens_est") or 0),
@@ -125,6 +129,7 @@ class ImpactService:
             baseline=baseline,
             saved=saved,
             probe=probe,
+            receipt_id=receipt_id,
         )
 
     def record_search_or_focus(
@@ -134,7 +139,8 @@ class ImpactService:
         payload: dict[str, Any],
         workspace_root: Path | None = None,
         probe: dict | None = None,
-    ) -> None:
+        receipt_id: str | None = None,
+    ) -> tuple[int, int, int]:
         results = payload.get("results") or []
         snippets: list[str] = []
         path_texts: dict[str, str] = {}
@@ -166,4 +172,6 @@ class ImpactService:
             baseline=baseline,
             saved=saved,
             probe=probe,
+            receipt_id=receipt_id,
         )
+        return served, baseline, saved

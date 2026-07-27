@@ -39,8 +39,8 @@ test("outcomes cover token savings reuse and scale", async () => {
     .join(" ")
     .toLowerCase();
   assert.match(blob, /token/);
-  assert.match(blob, /reuse|index/);
-  assert.match(blob, /large|monorepo/);
+  assert.match(blob, /reuse|index|receipt|bootstrap/);
+  assert.match(blob, /receipt|grounded|session/);
   assert.match(blob, /memory|journal|diary|chat/);
   assert.match(blob, /codebase|code|repo|symbol/);
 });

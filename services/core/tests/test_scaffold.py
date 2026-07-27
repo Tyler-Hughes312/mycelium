@@ -994,3 +994,100 @@ def test_mcp_formatters_and_tools(tmp_path: Path) -> None:
             assert "Updated: greet stays tiny" in updated
         finally:
             mcp_server._core = original
+
+
+def test_mcp_agent_context_tools(tmp_path: Path) -> None:
+    from mycelium.bridges.mcp.client import CoreHttp
+    from mycelium.bridges.mcp import server as mcp_server
+    from mycelium.bridges.mcp.formatters import format_bootstrap, format_task_packet
+
+    boot = format_bootstrap(
+        workspace={"id": "w1", "name": "demo", "status": "idle", "path": "/tmp/demo"},
+        workspaces=[{"id": "w1", "name": "demo", "status": "idle", "path": "/tmp/demo"}],
+        registered_new=True,
+        index_info={"status": "running", "started": True},
+        sync_info={"files_synced_count": 0, "fresh": True},
+        brain_pack_text="Patterns live here",
+        open_file_sections=["# Focus: app.py\n(no results)"],
+    )
+    assert "Mycelium session bootstrap" in boot
+    assert "Patterns live here" in boot
+    assert "registered=new" in boot
+
+    task = format_task_packet(
+        "Change context: add greet",
+        query_packet={"count": 0, "mode": "hybrid_rag", "results": []},
+        vault_slice="decision note",
+        commits_text="# Commits\n(none)",
+        hint="call session_start",
+    )
+    assert "Change context: add greet" in task
+    assert "hint: call session_start" in task
+    assert "decision note" in task
+
+    cfg = ensure_test_layout(tmp_path / "home")
+    repo_dir = tmp_path / "ctx-repo"
+    _init_git_repo(repo_dir)
+    _commit_file(repo_dir, "app.py", "def greet():\n    return 1\n", "Add greet")
+
+    with TestClient(create_app(cfg)) as client:
+        client.post("/vault/scaffold")
+        client.post(
+            "/vault/notes",
+            json={
+                "title": "Patterns",
+                "body": "How I work: minimize scope.\n",
+                "bucket": "brain",
+                "filename": "Patterns.md",
+            },
+        )
+
+        core = CoreHttp(client=client)
+        original = mcp_server._core
+        mcp_server._core = lambda: core  # type: ignore[assignment]
+        try:
+            # Auto-register via search without prior Desktop register
+            search = mcp_server.mycelium_search(
+                query="greet",
+                workspace_path=str(repo_dir),
+                limit=5,
+            )
+            assert "error:" not in search.lower() or "hint:" in search.lower()
+            listed = mcp_server.mycelium_list_workspaces()
+            assert str(repo_dir) in listed or repo_dir.name in listed
+
+            boot = mcp_server.mycelium_session_start(
+                workspace_path=str(repo_dir),
+                open_files="app.py",
+                ensure_index=True,
+                brain_tokens=800,
+            )
+            assert "session bootstrap" in boot.lower()
+            assert "error:" not in boot.lower()
+            assert "Patterns" in boot or "minimize" in boot.lower() or "brain" in boot.lower()
+
+            # Wait for index started by session_start
+            rows = client.get("/workspaces").json()["workspaces"]
+            assert rows
+            wid = rows[0]["id"]
+            assert _wait_index(client, wid)["status"] == "complete"
+
+            change = mcp_server.mycelium_change_context(
+                goal="greet helper",
+                workspace_path=str(repo_dir),
+            )
+            assert "Change context" in change
+            assert "error:" not in change.lower()
+
+            debug = mcp_server.mycelium_debug_context(
+                error="greet is broken",
+                path="app.py",
+                workspace_path=str(repo_dir),
+            )
+            assert "Debug context" in debug
+            assert "error:" not in debug.lower()
+
+            pre = mcp_server.mycelium_preflight(workspace_path=str(repo_dir))
+            assert "session bootstrap" in pre.lower()
+        finally:
+            mcp_server._core = original

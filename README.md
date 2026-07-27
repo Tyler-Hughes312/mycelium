@@ -1,25 +1,47 @@
 # Mycelium
 
+<p align="center">
+  <img src="apps/desktop/public/mycelium-logo.svg" alt="Mycelium" width="96" />
+</p>
+
+<p align="center">
+  <strong>Local-first codebase context for AI coding</strong><br />
+  Index once · serve tight MCP packets · stop burning tokens re-grepping
+</p>
+
+<p align="center">
+  <a href="https://github.com/Tyler-Hughes312/mycelium/stargazers">⭐ Star this repo</a>
+  ·
+  <a href="https://getmycelium.vercel.app">Website</a>
+  ·
+  <a href="https://github.com/Tyler-Hughes312/mycelium/releases/tag/v0.1.2-desktop">Download Desktop</a>
+  ·
+  <a href="docs/marketing/">Marketing / launch</a>
+</p>
+
 [![CI](https://github.com/Tyler-Hughes312/mycelium/actions/workflows/ci.yml/badge.svg)](https://github.com/Tyler-Hughes312/mycelium/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-0.1.2-0ea5e9.svg)](CHANGELOG.md)
 [![Site](https://img.shields.io/badge/site-getmycelium.vercel.app-black.svg)](https://getmycelium.vercel.app)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-3776AB.svg)](services/core/pyproject.toml)
 [![Local-first](https://img.shields.io/badge/privacy-local--first-22c55e.svg)](docs/DEPLOY.md)
-
-**Local-first context layer for AI-heavy developers.**
+[![GitHub stars](https://img.shields.io/github/stars/Tyler-Hughes312/mycelium?style=social)](https://github.com/Tyler-Hughes312/mycelium/stargazers)
 
 Stop burning tokens re-reading and re-searching your codebase every session. Mycelium **indexes your repos locally** (symbols, files, commits) and returns a **precise context packet** to Cursor / Claude via MCP — so agents spend context on the answer, not the haystack.
 
 This is **not** a chat journal or “agent memory vault.” Those tools optimize for remembering conversations. Mycelium optimizes for **efficient retrieval from your project structure** — a stronger, more demoable pitch (tokens saved vs paste-the-file / re-grep).
+
+**Agent loop (new):** `mycelium_session_start` → task tools (`change_context` / `debug_context`) → cite the one-line **`receipt=`** instead of re-dumping the repo. Desktop **Impact** shows **grounded %** (recalls with a receipt vs without).
+
+**30-second try:** Desktop (or `./scripts/dev.sh`) → Library → add `fixtures/dogfood-rate-limits` → Index → ask your agent via MCP: *how did we handle rate limits?*
 
 ```text
   Cursor / Claude ──MCP──► mycelium-mcp ──► Core :8787
   Desktop (Vite)  ──HTTP──────────────────► Core :8787
   VS Code panel   ──HTTP──────────────────► Core :8787
                          │
-                         ├── ~/.mycelium/data (indexes)  ← primary
-                         └── ~/.mycelium/vault           ← optional decisions/ADRs
+                         ├── ~/.mycelium/data (indexes + receipts)  ← primary
+                         └── ~/.mycelium/vault                      ← optional decisions/ADRs
 ```
 
 ## Why Mycelium
@@ -27,8 +49,10 @@ This is **not** a chat journal or “agent memory vault.” Those tools optimize
 | | |
 |---|---|
 | **Token efficiency (headline)** | Tight focus/search packets vs dumping files or grepping every session |
-| **Codebase-first index** | Project structure, symbols, commits — not conversation transcripts |
-| **Measurable impact** | Desktop **Impact** estimates tokens saved locally (served vs baseline dump) |
+| **Session bootstrap** | `mycelium_session_start` / `preflight` — auto-register repo, optional index, compact brain + open-file focus |
+| **Task-shaped tools** | `mycelium_change_context` / `mycelium_debug_context` — ranked hits for implement vs fix, not raw search lists |
+| **Context receipts** | One-line `receipt=` attestation (paths/ids only) — cite it; `verify_receipt` checks staleness without re-dumping |
+| **Measurable impact** | Desktop **Impact**: tokens/$ saved **and** grounded % (receipt-backed recalls) |
 | **Private by default** | Localhost only; upload / remote LLM are opt-in |
 | **Three surfaces** | Desktop console · editor side panel · agent MCP tools |
 
@@ -81,13 +105,22 @@ Copy [`templates/cursor/mcp.json.example`](templates/cursor/mcp.json.example) �
 
 Optional agent rule: copy [`templates/cursor/mycelium-mcp.mdc`](templates/cursor/mycelium-mcp.mdc) → `.cursor/rules/`.
 
-### 3. Index once, then ask
+### 3. Bootstrap, then ask (relevant-only)
 
-1. Open Desktop (or web UI) → **Library** → add your repo → **Index**
-2. Reload Cursor MCP
-3. Ask the agent to use Mycelium (`mycelium_search` / `mycelium_focus`) instead of grepping the whole tree
+1. Reload Cursor MCP (Core on `:8787` via Desktop or `mycelium serve`)
+2. Agent calls `mycelium_session_start` with your repo’s absolute path (auto-registers + indexes) — **compact** prefs + open-file focus, not a vault dump
+3. Prefer `mycelium_change_context` / `mycelium_debug_context` / `mycelium_search` over grepping the whole tree
+4. Cite the `receipt=` line; use `mycelium_verify_receipt` to check staleness instead of re-pasting files
 
-Full write/read policy: [docs/AGENT-SECOND-BRAIN.md](docs/AGENT-SECOND-BRAIN.md) · ops: [docs/DEPLOY.md](docs/DEPLOY.md#mcp-path-based)
+| Tool | Role |
+|---|---|
+| `mycelium_session_start` / `preflight` | Bootstrap + optional index |
+| `mycelium_change_context` | Implement / change a goal |
+| `mycelium_debug_context` | Fix an error / stack |
+| `mycelium_search` / `focus` | Semantic or file-local recall |
+| `mycelium_verify_receipt` | Tiny valid/stale check (paths only) |
+
+Full write/read policy: [docs/AGENT-SECOND-BRAIN.md](docs/AGENT-SECOND-BRAIN.md) · receipts: [docs/superpowers/specs/2026-07-27-context-receipts-design.md](docs/superpowers/specs/2026-07-27-context-receipts-design.md) · ops: [docs/DEPLOY.md](docs/DEPLOY.md#mcp-path-based)
 
 ## Develop from source (≈15 minutes)
 
@@ -133,6 +166,7 @@ rm -rf ~/.mycelium                   # optional: wipe vault + indexes
 ## Docs
 
 - [Positioning](docs/POSITIONING.md) — token efficiency vs agent-memory products
+- [Marketing / star growth](docs/marketing/) — agent runbook, launch week, paste-ready drafts
 - [Deploy / ops](docs/DEPLOY.md) — install, MCP, release gate
 - [Connect GitHub](docs/GITHUB.md) — import repos for cross-repo search
 - [Agent second brain](docs/AGENT-SECOND-BRAIN.md) — MCP read/write loop

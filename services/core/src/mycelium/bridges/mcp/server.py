@@ -9,39 +9,48 @@ from mcp.server.fastmcp import FastMCP
 
 from mycelium.bridges.mcp.client import DEFAULT_CORE_URL, CoreHttp
 from mycelium.bridges.mcp.formatters import (
+    format_bootstrap,
     format_commits,
     format_note,
     format_packet,
+    format_task_packet,
     resolve_workspace_id,
+)
+from mycelium.bridges.mcp.workspace_ensure import (
+    ensure_registered,
+    find_workspace_by_path,
+    maybe_start_index,
+    resolve_or_register,
 )
 from mycelium.core.domain.impact_pricing import _PROBE_KEYS
 
+_INSTRUCTIONS = (
+    "Mycelium is a local-first Context Layer + Thinking Vault for this developer. "
+    "Code and vault stay on localhost Core (default http://127.0.0.1:8787).\n\n"
+    "HARD HOOKS (required for meaningful coding work):\n"
+    "1) Call mycelium_session_start (or mycelium_preflight) FIRST with the absolute "
+    "workspace_path. It returns a COMPACT bootstrap + a one-line receipt — not a chat journal.\n"
+    "2) Before broad exploration (grep, globbing many files, reading large trees), "
+    "call mycelium_search, mycelium_focus, mycelium_change_context, or "
+    "mycelium_debug_context first. Cite the receipt=… line; do NOT re-dump vault/code.\n"
+    "3) Prefer mycelium_change_context(goal=…) when implementing; "
+    "mycelium_debug_context(error=…) when fixing. These return ranked hits only.\n"
+    "4) mycelium_verify_receipt(id) returns paths/titles only (no bodies). Use it to check "
+    "staleness instead of re-running a large pack.\n"
+    "5) Do NOT dump chat transcripts into the vault. Do NOT paste entire files when a "
+    "receipt already covers the hit list.\n\n"
+    "READ (prefer cheap structure first):\n"
+    "1) mycelium_vault_tree → 2) mycelium_vault_pack(bucket, small max_tokens) → "
+    "3) mycelium_get_note only if needed.\n\n"
+    "INDEX / ZERO-CONFIG:\n"
+    "Passing workspace_path auto-registers a git repo if missing. Full index starts only "
+    "from mycelium_session_start / mycelium_preflight when ensure_index=true (default).\n\n"
+    "Never invent paths that tools did not return."
+)
+
 mcp = FastMCP(
     "mycelium",
-    instructions=(
-        "Mycelium is a local-first second brain + Context Layer for this developer. "
-        "Code and vault stay on localhost Core (default http://127.0.0.1:8787).\n\n"
-        "READ (prefer cheap structure first):\n"
-        "1) mycelium_vault_tree → 2) mycelium_vault_pack(bucket) → 3) mycelium_get_note "
-        "only if needed. Use mycelium_search / mycelium_focus for semantic or file-local recall.\n\n"
-        "WRITE (second brain — when necessary):\n"
-        "Capture durable decisions, ADRs, and 'why we did X' into the Thinking Vault with "
-        "mycelium_create_note / mycelium_update_note (and mycelium_create_bucket for folders). "
-        "Vault layout (kepano + obsidian-mind inspired): brain/ (North Star, decisions index), "
-        "work/active|archive|decisions, notes/, daily/, reference/, thinking/, clippings/, templates/. "
-        "Read vault AGENTS.md / Home.md via pack if unsure where to file. "
-        "Use [[wikilinks]] to symbols/notes. Do NOT write every chat turn — only lasting knowledge. "
-        "Call mycelium_vault_scaffold once if the vault looks empty/flat.\n\n"
-        "INDEX FRESHNESS:\n"
-        "Core watches workspace + vault files on disk. mycelium_search / mycelium_focus auto-sync "
-        "dirty git files before querying. After bulk code edits you may call mycelium_sync_index. "
-        "Vault note writes re-embed immediately.\n\n"
-        "CROSS-REPO:\n"
-        "mycelium_search defaults to ALL registered workspaces so you can reuse patterns from old "
-        "repos. Pass workspace_id / workspace_path to narrow to one project. Results are tagged "
-        "with @repo name.\n\n"
-        "Never invent paths that tools did not return. Prefer Mycelium over guessing vault/code context."
-    ),
+    instructions=_INSTRUCTIONS,
 )
 
 
@@ -86,6 +95,114 @@ def _wid(
         workspace_path=workspace_path or None,
         default_all=default_all,
     )
+
+
+def _parse_open_files(open_files: str) -> list[str]:
+    if not open_files or not open_files.strip():
+        return []
+    parts = [p.strip().replace("\\", "/").lstrip("./") for p in open_files.split(",")]
+    return [p for p in parts if p][:5]
+
+
+def _session_bootstrap(
+    *,
+    workspace_id: str = "",
+    workspace_path: str = "",
+    open_files: str = "",
+    ensure_index: bool = True,
+    brain_tokens: int = 600,
+) -> str:
+    core = _core()
+    try:
+        registered_new = False
+        workspace: dict[str, Any] | None = None
+        path = (workspace_path or "").strip()
+        wid = (workspace_id or "").strip()
+
+        if path:
+            workspace, registered_new = ensure_registered(core, path)
+            wid = str(workspace["id"])
+        elif wid:
+            rows = core.list_workspaces()
+            workspace = next((w for w in rows if w.get("id") == wid), None)
+            if workspace is None:
+                raise ValueError(f"Unknown workspace_id: {wid}")
+        else:
+            rows = core.list_workspaces()
+            if len(rows) == 1:
+                workspace = rows[0]
+                wid = str(workspace["id"])
+            elif not rows:
+                raise ValueError(
+                    "Pass workspace_path (absolute git repo) to auto-register, "
+                    "or register a workspace in Desktop Library first."
+                )
+            else:
+                raise ValueError(
+                    "Multiple workspaces — pass workspace_path or workspace_id."
+                )
+
+        index_info = maybe_start_index(core, wid, ensure_index=ensure_index)
+        try:
+            index_info = {**core.index_status(wid), "started": index_info.get("started")}
+        except Exception:  # noqa: BLE001
+            pass
+
+        sync_info: dict[str, Any] | None = None
+        try:
+            sync_info = core.sync_workspace(wid)
+        except Exception as exc:  # noqa: BLE001
+            sync_info = {"fresh": False, "files_synced_count": 0, "error": str(exc)}
+
+        brain_text = ""
+        receipt = None
+        try:
+            pack = core.vault_pack(
+                bucket="brain",
+                max_tokens=max(64, min(brain_tokens, 1200)),
+            )
+            brain_text = str(pack.get("text") or "")
+            receipt = pack.get("receipt")
+        except Exception as exc:  # noqa: BLE001
+            brain_text = f"(brain pack unavailable: {exc})"
+
+        open_sections: list[str] = []
+        for rel in _parse_open_files(open_files):
+            try:
+                packet = core.focus(
+                    workspace_id=wid,
+                    path=rel,
+                    limit=3,
+                )
+                # Strip nested receipts — one receipt at end of bootstrap
+                section = format_packet(f"Focus: {rel}", packet)
+                section = "\n".join(
+                    ln for ln in section.splitlines() if not ln.startswith("receipt=")
+                )
+                open_sections.append(section)
+                if not receipt:
+                    receipt = packet.get("receipt")
+            except Exception as exc:  # noqa: BLE001
+                open_sections.append(f"# Focus: {rel}\nerror: {exc}")
+
+        workspaces = core.list_workspaces()
+        if workspace is None:
+            workspace = find_workspace_by_path(workspaces, path) if path else None
+
+        return format_bootstrap(
+            workspace=workspace,
+            workspaces=workspaces,
+            registered_new=registered_new,
+            index_info=index_info,
+            sync_info=sync_info,
+            brain_pack_text=brain_text,
+            open_file_sections=open_sections,
+            receipt=receipt if isinstance(receipt, dict) else None,
+        )
+    except Exception as exc:  # noqa: BLE001
+        return f"error: {exc}"
+    finally:
+        core.close()
 
 
 @mcp.tool()
@@ -135,15 +252,17 @@ def mycelium_search(
 
     Omit workspace_id to search ALL registered repos (reuse old code across projects).
     Pass workspace_id from mycelium_list_workspaces, workspace_path for one repo,
-    or workspace_id='*' explicitly for all.
+    or workspace_id='*' explicitly for all. Unknown workspace_path auto-registers
+    (does not start a full index — use mycelium_session_start for that).
     """
     core = _core()
     try:
-        wid = _wid(
+        wid, hint = resolve_or_register(
             core,
             workspace_id or None,
             workspace_path or None,
             default_all=True,
+            auto_register=bool(workspace_path),
         )
         try:
             if wid == "*":
@@ -159,7 +278,10 @@ def mycelium_search(
         except Exception:  # noqa: BLE001
             pass
         packet = core.query(query=query, workspace_id=wid, limit=max(1, min(limit, 10)))
-        return format_packet(f"Search: {query}", packet)
+        text = format_packet(f"Search: {query}", packet)
+        if hint:
+            text = f"hint: {hint}\n\n{text}"
+        return text
     except Exception as exc:  # noqa: BLE001
         return f"error: {exc}"
     finally:
@@ -180,10 +302,17 @@ def mycelium_focus(
 
     `path` is workspace-relative (e.g. src/auth.ts). Returns ranked related
     Symbols, Commits, Notes — notes explicitly linked to the symbol are boosted.
+    Unknown workspace_path auto-registers without starting a full index.
     """
     core = _core()
     try:
-        wid = _wid(core, workspace_id or None, workspace_path or None)
+        wid, hint = resolve_or_register(
+            core,
+            workspace_id or None,
+            workspace_path or None,
+            default_all=False,
+            auto_register=bool(workspace_path),
+        )
         try:
             core.sync_workspace(wid)
         except Exception:  # noqa: BLE001
@@ -196,11 +325,225 @@ def mycelium_focus(
             limit=max(1, min(limit, 10)),
         )
         label = f"Focus: {path}" + (f"#{symbol}" if symbol else "")
-        return format_packet(label, packet)
+        text = format_packet(label, packet)
+        if hint:
+            text = f"hint: {hint}\n\n{text}"
+        return text
     except Exception as exc:  # noqa: BLE001
         return f"error: {exc}"
     finally:
         core.close()
+
+
+@mcp.tool()
+def mycelium_session_start(
+    workspace_path: str = "",
+    workspace_id: str = "",
+    open_files: str = "",
+    ensure_index: bool = True,
+    brain_tokens: int = 600,
+) -> str:
+    """
+    Session bootstrap for agentic coding (call at the start of meaningful work).
+
+    Compact packet + one-line receipt (not a vault dump). Auto-registers the git
+    repo; ensure_index starts indexing when needed. open_files = comma-separated
+    workspace-relative paths (max 5). Default brain_tokens=600 keeps prefs tight.
+    """
+    return _session_bootstrap(
+        workspace_id=workspace_id,
+        workspace_path=workspace_path,
+        open_files=open_files,
+        ensure_index=ensure_index,
+        brain_tokens=brain_tokens,
+    )
+
+
+@mcp.tool()
+def mycelium_preflight(
+    workspace_path: str = "",
+    workspace_id: str = "",
+    open_files: str = "",
+    ensure_index: bool = True,
+) -> str:
+    """
+    Thin session preflight — call before broad codebase exploration.
+
+    Same as mycelium_session_start with a smaller brain token budget (400).
+    """
+    return _session_bootstrap(
+        workspace_id=workspace_id,
+        workspace_path=workspace_path,
+        open_files=open_files,
+        ensure_index=ensure_index,
+        brain_tokens=400,
+    )
+
+
+@mcp.tool()
+def mycelium_verify_receipt(receipt_id: str) -> str:
+    """
+    Verify a context receipt without re-dumping code or vault bodies.
+
+    Returns status (valid/stale), head comparison, and item paths/titles only.
+    Prefer this over re-running session_start or a large vault_pack.
+    """
+    from mycelium.core.domain.context_receipt import format_verify
+
+    core = _core()
+    try:
+        row = core.get_receipt(receipt_id.strip())
+        if not row:
+            return f"error: receipt not found: {receipt_id}"
+        return format_verify(
+            {
+                "id": row.get("id"),
+                "tool": row.get("tool"),
+                "workspace_id": row.get("workspace_id"),
+                "head": row.get("head"),
+                "item_count": row.get("item_count"),
+                "served_tokens": row.get("served_tokens"),
+                "items": row.get("items") or [],
+            },
+            current_head=str(row.get("head_now") or ""),
+        )
+    except Exception as exc:  # noqa: BLE001
+        return f"error: {exc}"
+    finally:
+        core.close()
+
+
+@mcp.tool()
+def mycelium_change_context(
+    goal: str,
+    workspace_id: str = "",
+    workspace_path: str = "",
+    limit: int = 8,
+) -> str:
+    """
+    Task-shaped packet for implementing a change: ranked search hits, related
+    decisions, and recent commits. Prefer this over raw search when the intent
+    is 'implement / change X'.
+    """
+    core = _core()
+    try:
+        wid, hint = resolve_or_register(
+            core,
+            workspace_id or None,
+            workspace_path or None,
+            default_all=False,
+            auto_register=bool(workspace_path),
+        )
+        try:
+            core.sync_workspace(wid)
+        except Exception:  # noqa: BLE001
+            pass
+        packet = core.query(
+            query=goal,
+            workspace_id=wid,
+            limit=max(1, min(limit, 10)),
+        )
+        vault_slice = ""
+        for bucket in ("work/decisions", "brain"):
+            try:
+                pack = core.vault_pack(bucket=bucket, max_tokens=350)
+                text = str(pack.get("text") or "").strip()
+                if text:
+                    vault_slice = text
+                    break
+            except Exception:  # noqa: BLE001
+                continue
+        commits = core.list_commits(wid, limit=6)
+        commits_text = format_commits(commits, path_filter="(recent)")
+        return format_task_packet(
+            f"Change context: {goal}",
+            query_packet=packet,
+            vault_slice=vault_slice,
+            commits_text=commits_text,
+            hint=hint,
+        )
+    except Exception as exc:  # noqa: BLE001
+        return f"error: {exc}"
+    finally:
+        core.close()
+
+
+@mcp.tool()
+def mycelium_debug_context(
+    error: str,
+    path: str = "",
+    workspace_id: str = "",
+    workspace_path: str = "",
+    limit: int = 8,
+) -> str:
+    """
+    Task-shaped packet for debugging: ranked search on the error, optional file
+    focus + commits, and a small gotchas/brain slice. Prefer this when fixing a failure.
+    """
+    core = _core()
+    try:
+        wid, hint = resolve_or_register(
+            core,
+            workspace_id or None,
+            workspace_path or None,
+            default_all=False,
+            auto_register=bool(workspace_path),
+        )
+        try:
+            core.sync_workspace(wid)
+        except Exception:  # noqa: BLE001
+            pass
+        packet = core.query(
+            query=error,
+            workspace_id=wid,
+            limit=max(1, min(limit, 10)),
+        )
+        focus_packet = None
+        commits_text = ""
+        rel = path.strip().replace("\\", "/").lstrip("./")
+        if rel:
+            try:
+                focus_packet = core.focus(workspace_id=wid, path=rel, limit=4)
+            except Exception:  # noqa: BLE001
+                focus_packet = None
+            commits = core.list_commits(wid, limit=min(max(limit * 5, 50), 200))
+            matched: list[dict[str, Any]] = []
+            for c in commits:
+                paths = [str(p).replace("\\", "/") for p in (c.get("changed_paths") or [])]
+                if any(p == rel or p.startswith(rel) or rel in p for p in paths):
+                    matched.append(c)
+                if len(matched) >= max(1, min(limit, 20)):
+                    break
+            commits_text = format_commits(matched, path_filter=rel)
+        vault_slice = ""
+        for bucket in ("brain", "work/decisions"):
+            try:
+                pack = core.vault_pack(bucket=bucket, max_tokens=300)
+                text = str(pack.get("text") or "").strip()
+                if text:
+                    vault_slice = text
+                    break
+            except Exception:  # noqa: BLE001
+                continue
+        return format_task_packet(
+            f"Debug context: {_snip_label(error)}",
+            query_packet=packet,
+            focus_packet=focus_packet,
+            vault_slice=vault_slice,
+            commits_text=commits_text,
+            hint=hint,
+        )
+    except Exception as exc:  # noqa: BLE001
+        return f"error: {exc}"
+    finally:
+        core.close()
+
+
+def _snip_label(text: str, limit: int = 80) -> str:
+    text = " ".join((text or "").split())
+    if len(text) <= limit:
+        return text
+    return text[: limit - 1] + "…"
 
 
 @mcp.tool()
@@ -295,7 +638,13 @@ def mycelium_vault_pack(
             f"[pack tokens_est={pack.get('tokens_est')} "
             f"max={pack.get('max_tokens')} truncated={pack.get('truncated')}]\n\n"
         )
-        return header + str(pack.get("text") or "")
+        from mycelium.core.domain.context_receipt import format_receipt_line
+
+        text = header + str(pack.get("text") or "")
+        line = format_receipt_line(pack.get("receipt") if isinstance(pack.get("receipt"), dict) else None)
+        if line:
+            text = text.rstrip() + "\n" + line + "\n"
+        return text
     except Exception as exc:  # noqa: BLE001
         return f"error: {exc}"
     finally:

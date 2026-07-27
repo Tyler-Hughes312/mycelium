@@ -26,11 +26,24 @@ Scaffolded automatically on Core first run (`ensure_local_layout`) and via `POST
 
 | Piece | Role |
 |---|---|
-| MCP server instructions | Built into `python -m mycelium.bridges.mcp` — every connected agent gets read+write guidance |
+| MCP server instructions | Built into `python -m mycelium.bridges.mcp` — hard hooks + read/write guidance |
+| Session / preflight | `mycelium_session_start`, `mycelium_preflight` — bootstrap packet |
+| Task packets | `mycelium_change_context`, `mycelium_debug_context` |
 | Write tools | `mycelium_create_bucket`, `mycelium_create_note`, `mycelium_update_note`, `mycelium_vault_scaffold` |
 | Read tools | tree / pack / get_note / search / focus / commits |
 | Cursor rule template | [`templates/cursor/mycelium-mcp.mdc`](../templates/cursor/mycelium-mcp.mdc) — install copies to `.cursor/rules/` |
 | MCP config example | [`templates/cursor/mcp.json.example`](../templates/cursor/mcp.json.example) |
+
+## Hard hooks
+
+1. Start meaningful work with `mycelium_session_start` / `mycelium_preflight` + absolute `workspace_path`.
+2. Before broad exploration, use Mycelium search / focus / change_context / debug_context.
+3. Prefer task-shaped tools for implement vs fix intents.
+4. No transcript dumps into the vault.
+
+## Zero-config workspaces
+
+Passing an unknown `workspace_path` **auto-registers** a git repo. A **full index** starts only from `mycelium_session_start` / `mycelium_preflight` when `ensure_index=true` (default). Search/focus may register but will not start a full index — they hint you to call session_start if the repo looks empty.
 
 ## Write policy
 
@@ -52,8 +65,9 @@ Scaffolded automatically on Core first run (`ensure_local_layout`) and via `POST
 1. Start Core: Desktop app, or `./scripts/dev.sh` / `mycelium serve` on `:8787`
 2. `./scripts/install.sh` (venv + Cursor rule + MCP example)
 3. Copy `templates/cursor/mcp.json.example` → `.cursor/mcp.json` (use absolute `…/venv/bin/mycelium-mcp`)
-4. Index a workspace in Desktop → Reload Cursor MCP
+4. Reload Cursor MCP → call `mycelium_session_start` with the repo’s absolute path (registers + indexes)
 
 Same MCP works for Claude Code / other MCP clients — they pick up server `instructions` automatically.
 
 See also the README section **Use with Cursor / Claude (MCP)**.
+Design: [`docs/superpowers/specs/2026-07-27-agent-context-tools-design.md`](superpowers/specs/2026-07-27-agent-context-tools-design.md).

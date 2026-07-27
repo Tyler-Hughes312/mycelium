@@ -7,8 +7,8 @@
 - **Performance / efficiency product** for AI-heavy developers
 - Indexes **repos** (symbols, files, commits) under `~/.mycelium`
 - Returns a **precise context packet** to Cursor / Claude (MCP) and Desktop
-- Headline metrics: **tokens saved**, time not spent grepping / pasting files
-- Easy before/after demo: paste half a file vs one focus/search packet
+- Headline metrics: **tokens saved**, **grounded %** (receipt-backed recalls), time not spent grepping / pasting files
+- Agent loop: **session_start** → task tools → **cite receipt** (no second dump)
 
 ## What we are not
 

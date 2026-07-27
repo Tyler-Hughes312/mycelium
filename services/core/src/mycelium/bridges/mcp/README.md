@@ -42,6 +42,11 @@ When the MCP client sends a recognizable model id in request `_meta` (e.g. `mode
 |---|---|
 | `mycelium_health` | Core reachability |
 | `mycelium_list_workspaces` | Registered repos |
+| `mycelium_session_start` | Session bootstrap (register + optional index + brain pack + open-file focus) |
+| `mycelium_preflight` | Thin alias of session_start (smaller brain budget) |
+| `mycelium_verify_receipt` | Check receipt valid/stale — paths/titles only, no bodies |
+| `mycelium_change_context` | Task packet for implementing a change |
+| `mycelium_debug_context` | Task packet for fixing an error |
 | `mycelium_search` | Hybrid RAG across **all** indexed repos by default (or one workspace) |
 | `mycelium_focus` | Focus packet for path / symbol / line |
 | `mycelium_vault_tree` | Folder/bucket map (no RAG) — prefer first |
@@ -54,7 +59,9 @@ When the MCP client sends a recognizable model id in request `_meta` (e.g. `mode
 | `mycelium_sync_index` | Sync dirty code files + optional vault reindex |
 | `mycelium_commits_for_path` | Commits touching a path |
 
-**Read (token-saving):** `mycelium_vault_tree` → `mycelium_vault_pack(bucket)` → `mycelium_get_note` only if needed. Use `mycelium_search` for semantic recall — search/focus **auto-sync** dirty git files first.
+**Hard hooks:** call `mycelium_session_start` / `mycelium_preflight` at the start of meaningful work; use search/focus/task tools before broad grepping. Packets end with a one-line `receipt=` — cite it; use `mycelium_verify_receipt` instead of re-dumping. Unknown `workspace_path` auto-registers; full index starts from session_start only (`ensure_index=true`).
+
+**Read (token-saving):** session bootstrap → `mycelium_vault_tree` → `mycelium_vault_pack(bucket)` → `mycelium_get_note` only if needed.
 
 **Write (when necessary):** durable decisions / ADRs with `[[wikilinks]]` — not every chat turn. See `docs/AGENT-SECOND-BRAIN.md`.
 

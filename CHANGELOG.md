@@ -5,6 +5,14 @@ All notable changes to Mycelium are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Agent context tools: `mycelium_session_start` / `preflight`, `change_context` / `debug_context`, zero-config workspace register
+- **Context receipts** — compact `receipt=` attestation on Search/Focus/Pack; `mycelium_verify_receipt`; Impact **grounded %**
+- Marketing site + README themes for bootstrap, task tools, and proof-carrying retrieval
+
 ## [0.1.2] — 2026-07-27
 
 ### Added

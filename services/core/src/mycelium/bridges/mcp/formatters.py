@@ -21,7 +21,7 @@ def compact_results(results: list[dict[str, Any]], *, max_items: int = 8) -> lis
                 "title": row.get("title"),
                 "path": row.get("path"),
                 "score": row.get("score"),
-                "snippet": _snip(str(row.get("snippet") or "")),
+                "snippet": _snip(str(row.get("snippet") or ""), 120),
                 "id": row.get("id"),
                 "workspace_name": row.get("workspace_name"),
                 "workspace_id": row.get("workspace_id"),
@@ -30,9 +30,19 @@ def compact_results(results: list[dict[str, Any]], *, max_items: int = 8) -> lis
     return out
 
 
+def _with_receipt(text: str, packet: dict[str, Any] | None = None, receipt: dict[str, Any] | None = None) -> str:
+    from mycelium.core.domain.context_receipt import format_receipt_line
+
+    r = receipt or (packet or {}).get("receipt")
+    line = format_receipt_line(r if isinstance(r, dict) else None)
+    if not line:
+        return text
+    return text.rstrip() + "\n" + line + "\n"
+
+
 def format_packet(label: str, packet: dict[str, Any]) -> str:
     """Human/agent-readable compact packet (not raw JSON dump)."""
-    results = compact_results(list(packet.get("results") or []))
+    results = compact_results(list(packet.get("results") or []), max_items=6)
     lines = [
         f"# {label}",
         f"count={packet.get('count', len(results))} mode={packet.get('mode', '')}",
@@ -44,7 +54,7 @@ def format_packet(label: str, packet: dict[str, Any]) -> str:
         lines.append(f"reason={packet['reason']}: {packet.get('message', '')}")
     if not results:
         lines.append("(no results)")
-        return "\n".join(lines)
+        return _with_receipt("\n".join(lines), packet)
     for i, row in enumerate(results, start=1):
         repo = row.get("workspace_name")
         prefix = f"@{repo} " if repo else ""
@@ -53,7 +63,7 @@ def format_packet(label: str, packet: dict[str, Any]) -> str:
         )
         if row.get("snippet"):
             lines.append(f"   {row['snippet']}")
-    return "\n".join(lines)
+    return _with_receipt("\n".join(lines), packet)
 
 
 def format_note(note: dict[str, Any], *, body_limit: int = 2000) -> str:
@@ -73,6 +83,100 @@ def format_note(note: dict[str, Any], *, body_limit: int = 2000) -> str:
         lines.append("unresolved: " + ", ".join(u.get("target", "") for u in unresolved))
     return "\n".join(lines)
 
+
+def format_bootstrap(
+    *,
+    workspace: dict[str, Any] | None,
+    workspaces: list[dict[str, Any]],
+    registered_new: bool,
+    index_info: dict[str, Any] | None,
+    sync_info: dict[str, Any] | None,
+    brain_pack_text: str,
+    open_file_sections: list[str],
+    receipt: dict[str, Any] | None = None,
+) -> str:
+    """Session bootstrap — prefs slice + open-file focus only (not a chat journal)."""
+    lines = ["# Mycelium session bootstrap", ""]
+    if workspace:
+        lines.append(
+            f"workspace id={workspace.get('id')} name={workspace.get('name')} "
+            f"status={workspace.get('status')} path={workspace.get('path')}"
+        )
+        if registered_new:
+            lines.append("registered=new (auto-registered this session)")
+    if index_info is not None:
+        lines.append(
+            f"index status={index_info.get('status')} "
+            f"started={index_info.get('started')} "
+            f"progress={index_info.get('progress', '')}"
+        )
+    if sync_info is not None:
+        lines.append(
+            f"sync files_synced={sync_info.get('files_synced_count', 0)} "
+            f"fresh={sync_info.get('fresh')}"
+        )
+    others = max(0, len(workspaces) - (1 if workspace else 0))
+    lines.append(f"workspaces_registered={len(workspaces)} others={others}")
+    lines.append("")
+    lines.append("## Brain (relevant only)")
+    # Hard truncate brain text so bootstrap cannot dump the whole vault
+    brain = (brain_pack_text or "").strip()
+    if len(brain) > 2400:
+        brain = brain[:2399] + "…"
+    lines.append(brain or "(empty brain pack)")
+    if open_file_sections:
+        lines.append("")
+        lines.append("## Open files (top hits only)")
+        for section in open_file_sections[:5]:
+            lines.append(section.strip())
+            lines.append("")
+    lines.append(
+        "Cite the receipt below. Prefer mycelium_change_context / mycelium_debug_context "
+        "over grepping. Do not re-pack the whole vault."
+    )
+    return _with_receipt("\n".join(lines).rstrip() + "\n", receipt=receipt)
+
+
+def format_task_packet(
+    label: str,
+    *,
+    query_packet: dict[str, Any] | None = None,
+    focus_packet: dict[str, Any] | None = None,
+    commits_text: str = "",
+    vault_slice: str = "",
+    hint: str | None = None,
+) -> str:
+    """Ranked task-shaped packet — search hits first; vault slice is optional & short."""
+    parts = [f"# {label}"]
+    if hint:
+        parts.append(f"hint: {hint}")
+    receipt = None
+    if query_packet is not None:
+        receipt = query_packet.get("receipt") or receipt
+        parts.append(format_packet("Search hits", query_packet).rstrip())
+    if focus_packet is not None:
+        receipt = focus_packet.get("receipt") or receipt
+        # Avoid double receipt line from nested format_packet — strip receipt lines
+        focus_text = format_packet("Focus hits", focus_packet)
+        focus_text = "\n".join(
+            ln for ln in focus_text.splitlines() if not ln.startswith("receipt=")
+        )
+        parts.append(focus_text.rstrip())
+    if vault_slice.strip():
+        slice_text = vault_slice.strip()
+        if len(slice_text) > 900:
+            slice_text = slice_text[:899] + "…"
+        parts.append("## Related vault (trimmed)")
+        parts.append(slice_text)
+    if commits_text.strip():
+        # Keep at most ~8 commit lines
+        c_lines = commits_text.strip().splitlines()[:12]
+        parts.append("\n".join(c_lines))
+    body = "\n\n".join(parts).rstrip() + "\n"
+    # One receipt only (prefer search)
+    if query_packet is not None:
+        return body  # format_packet already appended receipt
+    return _with_receipt(body, receipt=receipt if isinstance(receipt, dict) else None)
 
 def format_commits(commits: list[dict[str, Any]], *, path_filter: str) -> str:
     lines = [f"# Commits touching `{path_filter}`", f"count={len(commits)}"]

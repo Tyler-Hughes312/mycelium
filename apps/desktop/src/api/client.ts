@@ -647,6 +647,9 @@ export type ImpactSummary = {
   tokens_saved: number;
   savings_pct: number;
   usd_saved?: number;
+  grounded_events?: number;
+  ungrounded_events?: number;
+  grounded_pct?: number;
   by_tool?: ImpactByTool[];
   by_model?: ImpactByModel[];
 };
@@ -662,6 +665,8 @@ export type ImpactEvent = {
   model_source?: ImpactModelSource;
   usd_per_1m_input?: number;
   usd_saved?: number;
+  receipt_id?: string;
+  grounded?: boolean;
 };
 
 export type ImpactPricingRate = {
