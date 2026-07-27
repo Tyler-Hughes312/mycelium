@@ -6,7 +6,7 @@ https://github.com/Tyler-Hughes312/mycelium/releases/tag/v0.1.2-desktop
 | Platform | Asset |
 |---|---|
 | macOS (Apple Silicon) | [`Mycelium_0.1.2_aarch64.dmg`](https://github.com/Tyler-Hughes312/mycelium/releases/download/v0.1.2-desktop/Mycelium_0.1.2_aarch64.dmg) |
-| Windows | `Mycelium_*-setup.exe` (NSIS) when published on the same release |
+| Windows (x64) | [`Mycelium_0.1.2_x64-setup.exe`](https://github.com/Tyler-Hughes312/mycelium/releases/download/v0.1.2-desktop/Mycelium_0.1.2_x64-setup.exe) |
 
 ## First launch
 
