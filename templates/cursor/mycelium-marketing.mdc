@@ -1,0 +1,17 @@
+---
+description: Mycelium marketing agent — publisher, star growth, GTM
+globs:
+alwaysApply: false
+---
+
+# Mycelium marketing agent
+
+When the user asks about marketing, stars, launch, or GTM for Mycelium:
+
+1. Read `docs/marketing/AGENT.md` and follow its loop.
+2. Prefer vault notes: `reference/marketing-playbook`, `reference/star-growth-playbook`, `work/active/marketing-engine`.
+3. Keep positioning: **codebase index + token efficiency**, never chat-memory vault.
+4. Never invent metrics/testimonials; illustrative savings must stay labeled.
+5. **Publish with** `./scripts/marketing-publish.sh` (`status` → `dry-run` → `run --i-understand` when creds exist). Do not stop at drafts.
+6. HN requires Tyler account + `login-hn`. Reddit requires `~/.mycelium/marketing/marketing.env` — see `docs/marketing/SETUP-CREDENTIALS.md`.
+7. Product Hunt / awesome-lists go through `queue` + approve.

@@ -46,14 +46,24 @@ export function Setup() {
             Download Desktop
           </a>
           <p className="text-sm text-[var(--color-muted)]">
-            macOS Gatekeeper / Windows SmartScreen notes:{" "}
+            Gatekeeper / SmartScreen:{" "}
             <a
               href={LINKS.desktopInstallDoc}
               target="_blank"
               rel="noreferrer"
               className="cursor-pointer text-[var(--color-teal)] underline-offset-4 transition-colors duration-200 hover:underline"
             >
-              Desktop install guide
+              Desktop install
+            </a>
+            {" · "}
+            Vault + MCP for Cursor / VS Code / Claude:{" "}
+            <a
+              href={LINKS.gettingStartedDoc}
+              target="_blank"
+              rel="noreferrer"
+              className="cursor-pointer text-[var(--color-teal)] underline-offset-4 transition-colors duration-200 hover:underline"
+            >
+              Getting started
             </a>
             .
           </p>

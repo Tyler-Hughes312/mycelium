@@ -11,6 +11,10 @@ test("CTA Download is same-origin DMG (not GitHub navigation)", async () => {
   );
   assert.equal(LINKS.github, "https://github.com/Tyler-Hughes312/mycelium");
   assert.equal(LINKS.desktopInstallDoc, "https://github.com/Tyler-Hughes312/mycelium/blob/main/docs/DESKTOP-INSTALL.md");
+  assert.equal(
+    LINKS.gettingStartedDoc,
+    "https://github.com/Tyler-Hughes312/mycelium/blob/main/docs/GETTING-STARTED.md",
+  );
 });
 
 test("capabilities cover five surfaces in order", async () => {
@@ -65,7 +69,7 @@ test("vault capability is secondary to code indexing", async () => {
   assert.match(agents.body.toLowerCase(), /reuse_check|reuse/);
 });
 
-test("setup mentions auto-index and reuse without shell scripts", async () => {
+test("setup mentions vault scaffold agents and reuse without shell scripts", async () => {
   const { SETUP_STEPS, CAPABILITIES } = await import("./content.ts");
   const blob = [...SETUP_STEPS, ...CAPABILITIES]
     .map((s) => ("body" in s ? `${"title" in s ? s.title : ""} ${s.body}` : ""))
@@ -73,6 +77,8 @@ test("setup mentions auto-index and reuse without shell scripts", async () => {
     .toLowerCase();
   assert.match(blob, /index/);
   assert.match(blob, /reuse_check|reuse/);
+  assert.match(blob, /vault/);
+  assert.match(blob, /cursor|vscode|claude|windsurf|codex/);
   assert.equal(blob.includes("install.sh"), false);
   assert.equal(blob.includes("dev.sh"), false);
   assert.equal(blob.includes("./scripts"), false);

@@ -66,16 +66,17 @@ Search/focus may register but will not start a full index — they hint you to c
 - Vault note create/update re-embeds immediately; disk edits to `.md` also re-embed via vault watcher.
 - Explicit: `mycelium_sync_index` after large edit batches.
 
-## Enable for Cursor (any machine)
+## Enable for Cursor / VS Code / Codex / Claude (any machine)
 
-**Fast path:** Download [Desktop](https://github.com/Tyler-Hughes312/mycelium/releases/tag/v0.1.3-desktop) (Core on `:8787`) + clone repo → `./scripts/install.sh` for `mycelium-mcp` only.
+**Start here:** **[GETTING-STARTED.md](GETTING-STARTED.md)** — Desktop scaffolds the vault; one `./scripts/install.sh` wires MCP into your agents.
 
-1. Start Core: Desktop app, or `./scripts/dev.sh` / `mycelium serve` on `:8787`
-2. `./scripts/install.sh` (venv + project rule/MCP + **user-level** `~/.cursor/hooks.json` `workspaceOpen` + `~/.cursor/mcp.json`)
-3. Open any git repo in Cursor — indexing starts via the hook (Core must be up)
-4. In Agent chat, call `mycelium_session_start` with the repo’s absolute path for the compact brain/open-file packet
+**Fast path:**
 
-Same MCP works for Claude Code / other MCP clients — they pick up server `instructions` automatically.
+1. Download [Desktop](https://github.com/Tyler-Hughes312/mycelium/releases/tag/v0.1.3-desktop) (Core on `:8787`) — vault appears at `~/.mycelium/vault/`
+2. Clone this repo → `./scripts/install.sh` — venv + **MCP into Cursor / VS Code / Codex / Windsurf / Claude Desktop** + Cursor `workspaceOpen` hook
+3. Claude Code: `claude mcp add mycelium --env MYCELIUM_CORE_URL=http://127.0.0.1:8787 -- …/venv/bin/mycelium-mcp`
+4. Open a git repo (Cursor auto-indexes) → agents call `mycelium_session_start` / `reuse_check`
 
-See also the README section **Use with Cursor / Claude (MCP)**.
-Design: [`docs/superpowers/specs/2026-07-27-agent-context-tools-design.md`](superpowers/specs/2026-07-27-agent-context-tools-design.md).
+Client matrix: [`docs/MCP-CLIENTS.md`](MCP-CLIENTS.md).
+
+Same MCP works for any MCP host that can spawn a stdio server.

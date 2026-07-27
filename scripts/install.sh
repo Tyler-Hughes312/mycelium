@@ -42,31 +42,13 @@ echo "==> Preparing dogfood fixture repo…"
 echo "==> Installing Cursor agent second-brain rule…"
 mkdir -p "$ROOT/.cursor/rules"
 cp "$ROOT/templates/cursor/mycelium-mcp.mdc" "$ROOT/.cursor/rules/mycelium-mcp.mdc"
-if [[ ! -f "$ROOT/.cursor/mcp.json" ]]; then
-  # Prefer absolute mycelium-mcp from this venv (IDEs often lack shell PATH).
-  cat > "$ROOT/.cursor/mcp.json" <<EOF
-{
-  "mcpServers": {
-    "mycelium": {
-      "command": "$ROOT/venv/bin/mycelium-mcp",
-      "args": [],
-      "env": {
-        "MYCELIUM_CORE_URL": "http://127.0.0.1:8787"
-      }
-    }
-  }
-}
-EOF
-  echo "    Wrote .cursor/mcp.json (venv mycelium-mcp; no PYTHONPATH)"
-else
-  echo "    Kept existing .cursor/mcp.json"
-fi
 
-echo "==> Installing user-level Cursor hooks + MCP (auto-index on workspace open)…"
+echo "==> Installing MCP for Cursor / VS Code / Codex / Windsurf / Claude (+ Cursor workspaceOpen hook)…"
+# Prefer user-level Cursor MCP (all projects). Avoids duplicate project+user Mycelium servers.
 # shellcheck disable=SC2094
 (
   cd "$ROOT/scripts"
-  "$ROOT/venv/bin/python" install_cursor_user_config.py \
+  "$ROOT/venv/bin/python" install_mcp_clients.py \
     --repo-root "$ROOT" \
     --mycelium-mcp "$ROOT/venv/bin/mycelium-mcp"
 )
@@ -74,13 +56,16 @@ echo "==> Installing user-level Cursor hooks + MCP (auto-index on workspace open
 echo
 echo "Install complete."
 echo
+echo "Easy path: docs/GETTING-STARTED.md  (Desktop → vault → agents)"
+echo
 echo "Next (≈ first Context in <15 min):"
-echo "  1. ./scripts/run-core.sh   # or Desktop app (Core on :8787)"
+echo "  1. ./scripts/run-core.sh   # or Desktop app (Core on :8787; vault scaffolds at ~/.mycelium/vault)"
 echo "  2. Open any git repo in Cursor — workspaceOpen auto-registers + indexes"
 echo "  3. Or dogfood: Library → add: $ROOT/fixtures/dogfood-rate-limits"
 echo "  4. Search: \"how did we handle rate limits\""
 echo
+echo "MCP clients: docs/MCP-CLIENTS.md"
 echo "Production Desktop preview: ./scripts/run-desktop.sh"
 echo "VS Code .vsix: cd apps/vscode && npm run package"
-echo "Agents / MCP: docs/AGENT-SECOND-BRAIN.md · docs/DEPLOY.md"
+echo "Agents / vault: docs/AGENT-SECOND-BRAIN.md · docs/DEPLOY.md"
 echo "Demo script: docs/DEMO.md"

@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mycelium-marketing"
+version = "0.1.0"
+description = "Mycelium marketing publisher — HN + Reddit launch autopilot"
+requires-python = ">=3.12"
+dependencies = [
+  "praw>=7.7.0",
+  "playwright>=1.40.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0"]
+
+[project.scripts]
+mycelium-marketing = "mycelium_marketing.publisher:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

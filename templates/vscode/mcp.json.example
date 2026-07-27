@@ -1,0 +1,12 @@
+{
+  "servers": {
+    "mycelium": {
+      "type": "stdio",
+      "command": "/ABSOLUTE/PATH/TO/mycelium/venv/bin/mycelium-mcp",
+      "args": [],
+      "env": {
+        "MYCELIUM_CORE_URL": "http://127.0.0.1:8787"
+      }
+    }
+  }
+}

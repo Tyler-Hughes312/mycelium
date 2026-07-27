@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`docs/GETTING-STARTED.md`** — Desktop → Thinking Vault scaffold → one-command multi-agent MCP; linked from README, DESKTOP-INSTALL, MCP-CLIENTS, marketing Setup
+- Multi-client MCP install — Cursor, VS Code/Copilot, Codex, Windsurf, Claude Desktop via `scripts/install_mcp_clients.py`; matrix in `docs/MCP-CLIENTS.md`
+- Dedupes Cursor project vs user Mycelium MCP by default (one server, not two)
+- Marketing site Setup copy: vault auto-scaffold + wire agents across IDEs; Getting started link
+- `release-check.sh` also runs marketing site test + production build
+- Opt-in marketing publisher (`services/marketing`, `scripts/marketing-publish.sh`) — HN/Reddit drafts with credentials; not required for product install
+
+### Changed
+
+- `install.sh` / `install_cursor_user_config.py` delegate to multi-client installer; post-install points at GETTING-STARTED
+
 ## [0.1.3] — 2026-07-27
 
 ### Added

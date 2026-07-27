@@ -33,6 +33,8 @@ This is **not** a chat journal or “agent memory vault.” Those tools optimize
 
 **Agent loop:** `session_start` → **`reuse_check`** (plan/build) → task tools (`change_context` / `debug_context`) → cite the one-line **`receipt=`** instead of re-dumping the repo. Open a git repo in Cursor with Core running and **`workspaceOpen` auto-indexes**. Desktop **Impact** shows **grounded %** (recalls with a receipt vs without).
 
+**Easy setup:** [Desktop + vault + agents](docs/GETTING-STARTED.md) — launch Desktop (vault scaffolds at `~/.mycelium/vault`), run `./scripts/install.sh` once to wire Cursor / VS Code / Codex / Claude / Windsurf.
+
 **30-second try:** Desktop (or `./scripts/dev.sh`) → Library → add `fixtures/dogfood-rate-limits` → Index → ask your agent via MCP: *how did we handle rate limits?*
 
 ```text
@@ -67,6 +69,7 @@ Install a packaged app (Core is bundled — no Python/Node required):
 - **Latest release:** https://github.com/Tyler-Hughes312/mycelium/releases/tag/v0.1.3-desktop  
 - **All releases:** https://github.com/Tyler-Hughes312/mycelium/releases  
 - **Install notes (Gatekeeper / SmartScreen):** [docs/DESKTOP-INSTALL.md](docs/DESKTOP-INSTALL.md)
+- **Then vault + agents:** [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md)
 - **Marketing site:** https://getmycelium.vercel.app  
 
 Build locally:
@@ -77,35 +80,35 @@ Build locally:
 
 ## Use with Cursor / Claude (MCP)
 
-Mycelium MCP is how agents get indexed context packets. Core must be running on `127.0.0.1:8787` (Desktop app **or** `./scripts/dev.sh` / `mycelium serve`).
+Step-by-step (Desktop → Thinking Vault → agents): **[docs/GETTING-STARTED.md](docs/GETTING-STARTED.md)**.
+
+Mycelium MCP is how agents get indexed context packets **and** vault tools. Core must be running on `127.0.0.1:8787` (Desktop app **or** `./scripts/dev.sh` / `mycelium serve`). First Core start scaffolds `~/.mycelium/vault/` automatically.
 
 ### 1. Install the MCP bridge
 
 ```bash
 git clone https://github.com/Tyler-Hughes312/mycelium.git
 cd mycelium
-./scripts/install.sh          # creates venv + mycelium-mcp
+./scripts/install.sh          # creates venv + mycelium-mcp + wires agents
 ```
 
 Or point Cursor at the absolute binary: `…/mycelium/venv/bin/mycelium-mcp`.
 
-### 2. Add MCP config (Cursor)
+### 2. Wire MCP into your coding agents
 
-`./scripts/install.sh` merges Mycelium into **user-level** `~/.cursor/mcp.json` and installs a Cursor **`workspaceOpen`** hook so opening any git repo auto-registers + indexes (Core must be running). You can also copy [`templates/cursor/mcp.json.example`](templates/cursor/mcp.json.example) → project `.cursor/mcp.json`:
+`./scripts/install.sh` installs Mycelium into **Cursor, VS Code/Copilot, Codex, Windsurf, and Claude Desktop** (when present), plus a Cursor `workspaceOpen` hook. Prefer **user-level** Cursor MCP so you don’t get two Mycelium servers.
 
-```json
-{
-  "mcpServers": {
-    "mycelium": {
-      "command": "/ABSOLUTE/PATH/TO/mycelium/venv/bin/mycelium-mcp",
-      "args": [],
-      "env": { "MYCELIUM_CORE_URL": "http://127.0.0.1:8787" }
-    }
-  }
-}
+Full matrix + manual snippets: **[docs/MCP-CLIENTS.md](docs/MCP-CLIENTS.md)**.
+
+Quick Claude Code:
+
+```bash
+claude mcp add mycelium \
+  --env MYCELIUM_CORE_URL=http://127.0.0.1:8787 \
+  -- /ABSOLUTE/PATH/TO/mycelium/venv/bin/mycelium-mcp
 ```
 
-Optional agent rule: copy [`templates/cursor/mycelium-mcp.mdc`](templates/cursor/mycelium-mcp.mdc) → `.cursor/rules/`.
+Optional agent rule (Cursor): copy [`templates/cursor/mycelium-mcp.mdc`](templates/cursor/mycelium-mcp.mdc) → `.cursor/rules/`.
 
 ### 3. Bootstrap, then ask (relevant-only)
 
@@ -169,11 +172,13 @@ rm -rf ~/.mycelium                   # optional: wipe vault + indexes
 
 ## Docs
 
+- [**Getting started**](docs/GETTING-STARTED.md) — Desktop, Thinking Vault, multi-agent MCP
 - [Positioning](docs/POSITIONING.md) — token efficiency vs agent-memory products
 - [Marketing / star growth](docs/marketing/) — agent runbook, launch week, paste-ready drafts
 - [Deploy / ops](docs/DEPLOY.md) — install, MCP, release gate
 - [Connect GitHub](docs/GITHUB.md) — import repos for cross-repo search
 - [Agent second brain](docs/AGENT-SECOND-BRAIN.md) — MCP read/write loop
+- [MCP clients](docs/MCP-CLIENTS.md) — Cursor, VS Code/Copilot, Codex, Claude, Windsurf
 - [Demo script](docs/DEMO.md) · [Dogfood checklist](docs/DOGFOOD-CHECKLIST.md)
 - [Changelog](CHANGELOG.md) · [License (MIT)](LICENSE)
 

@@ -1,0 +1,10 @@
+# Paste into ~/.codex/config.toml (or project .codex/config.toml for trusted repos).
+# Prefer: ./scripts/install.sh which merges this automatically.
+
+[mcp_servers.mycelium]
+command = "/ABSOLUTE/PATH/TO/mycelium/venv/bin/mycelium-mcp"
+args = []
+startup_timeout_sec = 30
+
+[mcp_servers.mycelium.env]
+MYCELIUM_CORE_URL = "http://127.0.0.1:8787"

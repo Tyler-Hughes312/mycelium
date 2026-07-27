@@ -42,6 +42,8 @@ Thumbs.db
 .idea/
 *.local
 .cursor/
+.vscode/mcp.json
+!.vscode/settings.json
 
 # Mycelium local runtime (lives in ~/.mycelium by default; ignore if ever nested)
 .mycelium/

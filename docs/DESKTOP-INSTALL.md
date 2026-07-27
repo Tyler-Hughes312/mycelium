@@ -12,9 +12,16 @@ https://github.com/Tyler-Hughes312/mycelium/releases/tag/v0.1.3-desktop
 
 1. Install / open the app.
 2. Core starts automatically inside the app (binds `127.0.0.1:8787`).
-3. You should land on **Library**. Add a workspace and Index — no Python or Node required.
+3. On first run, Core **scaffolds the Thinking Vault** at `~/.mycelium/vault/` (`Home.md`, `brain/`, `work/`, …). Browse it under **Vault** in the app — no manual folder setup.
+4. You should land on **Library**. Add a workspace and Index — no Python or Node required for Desktop alone.
 
-Data and logs live in `~/.mycelium/` (Vault, indexes, logs).
+Data and logs live in `~/.mycelium/` (vault, indexes, logs).
+
+## Next: coding agents + vault (easy)
+
+Desktop alone indexes and searches in the UI. To give **Cursor / VS Code / Codex / Claude / Windsurf** the same context (and vault read/write tools), follow the three-step guide:
+
+**[GETTING-STARTED.md](GETTING-STARTED.md)** — Desktop → `./scripts/install.sh` wires MCP into your agents → vault already waiting under `~/.mycelium/vault`.
 
 ## Unsigned builds (current)
 

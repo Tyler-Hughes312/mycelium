@@ -34,6 +34,9 @@ else
   (cd "$ROOT/apps/vscode" && npm install --no-save @vscode/vsce && npm run package) || fail=1
 fi
 
+echo "==> Marketing site test + build"
+(cd "$ROOT/apps/web" && npm test && npm run build) || fail=1
+
 if [[ "$fail" -ne 0 ]]; then
   echo
   echo "release-check FAILED"
@@ -41,4 +44,4 @@ if [[ "$fail" -ne 0 ]]; then
 fi
 
 echo
-echo "release-check OK — ready for 0.1.0 tag"
+echo "release-check OK — Core/Desktop/VS Code/Web gate passed (current Desktop: 0.1.3)"

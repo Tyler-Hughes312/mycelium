@@ -10,6 +10,8 @@ export const LINKS = {
   github: "https://github.com/Tyler-Hughes312/mycelium",
   desktopInstallDoc:
     "https://github.com/Tyler-Hughes312/mycelium/blob/main/docs/DESKTOP-INSTALL.md",
+  gettingStartedDoc:
+    "https://github.com/Tyler-Hughes312/mycelium/blob/main/docs/GETTING-STARTED.md",
 } as const;
 
 export const HERO = {
@@ -108,13 +110,13 @@ export const CAPABILITIES: Capability[] = [
   {
     id: "vault",
     title: "Vault",
-    body: "Optional markdown notes for decisions and ADRs — secondary to code indexing, not the product.",
+    body: "Thinking Vault scaffolds on first launch under ~/.mycelium/vault — optional decisions and ADRs agents can read and write. Secondary to code indexing, not the product.",
     wash: "teal",
   },
   {
     id: "agents",
     title: "Agents",
-    body: "MCP: session_start, reuse_check, change/debug context, receipts — agents get relevant packets and ask before rebuilding prior art.",
+    body: "One install wires Cursor, VS Code, Codex, Claude, and Windsurf. Same MCP tools everywhere: session_start, reuse_check, change/debug context, vault notes, receipts.",
     wash: "amber",
   },
 ];
@@ -122,18 +124,18 @@ export const CAPABILITIES: Capability[] = [
 export const SETUP_STEPS = [
   {
     n: 1,
-    title: "Install",
-    body: "Download Desktop 0.1.3 from Releases, or add the Mycelium MCP server in Cursor / Claude.",
+    title: "Install Desktop",
+    body: "Download Desktop 0.1.3. Core starts on localhost and scaffolds your Thinking Vault at ~/.mycelium/vault — no manual folder setup.",
   },
   {
     n: 2,
-    title: "Open",
-    body: "Launch Desktop so Core is on localhost. Open any git repo in Cursor — it can auto-register and start indexing.",
+    title: "Wire your agents",
+    body: "Add Mycelium MCP once — Cursor, VS Code/Copilot, Codex, Claude, and Windsurf share the same tools. Open a git repo and indexing can start automatically.",
   },
   {
     n: 3,
     title: "Use",
-    body: "Agents call session_start, then reuse_check before plan/build, then change_context or search — cite the receipt instead of re-pasting files. Watch grounded % on Desktop Impact.",
+    body: "Agents call session_start, then reuse_check before plan/build, then change_context or search — cite the receipt instead of re-pasting files. Browse or edit the vault in Desktop; durable notes only. Watch grounded % on Impact.",
   },
 ] as const;
 

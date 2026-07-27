@@ -49,24 +49,23 @@ rm -rf ~/.mycelium
 
 Health: `curl -s http://127.0.0.1:8787/health`
 
-## MCP (PATH-based)
+## MCP (all IDEs / agents)
 
-After install, `mycelium-mcp` is on the venv PATH. Cursor template:
+Friendly path (Desktop + vault + agents): **[GETTING-STARTED.md](GETTING-STARTED.md)**.  
+Client matrix: **[MCP-CLIENTS.md](MCP-CLIENTS.md)** (Cursor, VS Code + Copilot, Codex, Claude Code, Claude Desktop, Windsurf).
+
+After `./scripts/install.sh`, Mycelium is merged into user configs automatically. Core must be on `127.0.0.1:8787` (vault scaffolds on first Core start).
+
+PATH-based binary (any client):
 
 ```json
 {
-  "mcpServers": {
-    "mycelium": {
-      "command": "mycelium-mcp",
-      "env": { "MYCELIUM_CORE_URL": "http://127.0.0.1:8787" }
-    }
-  }
+  "command": "mycelium-mcp",
+  "env": { "MYCELIUM_CORE_URL": "http://127.0.0.1:8787" }
 }
 ```
 
-If the IDE does not inherit your shell PATH, point `command` at the absolute venv binary:
-
-`/path/to/MemoryOptimization/venv/bin/mycelium-mcp`
+If the IDE does not inherit your shell PATH, use the absolute `…/venv/bin/mycelium-mcp`.
 
 No `PYTHONPATH` required.
 

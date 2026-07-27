@@ -66,6 +66,15 @@ When the MCP client sends a recognizable model id in request `_meta` (e.g. `mode
 
 **Write (when necessary):** durable decisions / ADRs with `[[wikilinks]]` — not every chat turn. See `docs/AGENT-SECOND-BRAIN.md`.
 
+## Clients (Cursor / VS Code / Codex / Claude / Windsurf)
+
+**Full matrix:** [`docs/MCP-CLIENTS.md`](../../../../../docs/MCP-CLIENTS.md)  
+**Easy path (Desktop + vault + agents):** [`docs/GETTING-STARTED.md`](../../../../../docs/GETTING-STARTED.md)
+
+`./scripts/install.sh` runs `install_mcp_clients.py` which merges Mycelium into user configs for Cursor, VS Code/Copilot, Codex, Windsurf, and Claude Desktop (when installed), and prints the Claude Code CLI one-liner.
+
+Prefer **user-level** Cursor MCP (`~/.cursor/mcp.json`) — having Mycelium in both user and project `.cursor/mcp.json` shows up as **two** Mycelium servers.
+
 ## Cursor
 
 Prefer PATH / absolute binary (**no `PYTHONPATH`**):
@@ -85,14 +94,23 @@ Prefer PATH / absolute binary (**no `PYTHONPATH`**):
 
 If the IDE does not see your shell PATH, set `command` to `…/venv/bin/mycelium-mcp`.
 
-`./scripts/install.sh` also merges Mycelium into **user-level** `~/.cursor/mcp.json` and installs a `workspaceOpen` hook (`~/.mycelium/bin/cursor-workspace-open`) so opening any git repo registers + indexes against Core (fail-open if Core is down). Template: `templates/cursor/hooks.json`.
+Install also adds a `workspaceOpen` hook (`~/.mycelium/bin/cursor-workspace-open`). Template: `templates/cursor/hooks.json`.
 
-See `templates/cursor/mcp.json.example` and `docs/DEPLOY.md`.
+See `templates/cursor/mcp.json.example` and `docs/MCP-CLIENTS.md`.
 
 ## Claude Code
 
 ```bash
-claude mcp add mycelium -- mycelium-mcp
+claude mcp add mycelium \
+  --env MYCELIUM_CORE_URL=http://127.0.0.1:8787 \
+  -- /ABS/PATH/venv/bin/mycelium-mcp
+```
+
+## Codex
+
+```bash
+# or let install_mcp_clients.py merge ~/.codex/config.toml
+codex mcp add mycelium -- ./venv/bin/mycelium-mcp
 ```
 
 ## Agent tip
