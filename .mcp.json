@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "mycelium": {
+      "type": "stdio",
+      "command": "${CLAUDE_PROJECT_DIR}/venv/bin/mycelium-mcp",
+      "args": [],
+      "env": {
+        "MYCELIUM_CORE_URL": "http://127.0.0.1:8787"
+      }
+    }
+  }
+}
