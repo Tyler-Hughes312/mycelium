@@ -32,9 +32,17 @@ jobs:
         shell: bash
         run: |
           python -m venv venv
-          ./venv/bin/pip install -U pip
-          ./venv/bin/pip install -e "services/core[dev]"
-          ./venv/bin/pip install "pyinstaller>=6.0"
+          if [[ -x ./venv/bin/pip ]]; then
+            PIP=./venv/bin/pip
+          elif [[ -x ./venv/Scripts/pip.exe ]]; then
+            PIP=./venv/Scripts/pip.exe
+          else
+            echo "venv pip not found" >&2
+            exit 1
+          fi
+          "$PIP" install -U pip
+          "$PIP" install -e "services/core[dev]"
+          "$PIP" install "pyinstaller>=6.0"
 
       - uses: actions/setup-node@v4
         with:
@@ -43,6 +51,7 @@ jobs:
           cache-dependency-path: apps/desktop/package-lock.json
 
       - name: Install Desktop deps
+        shell: bash
         working-directory: apps/desktop
         run: |
           (cd ../../packages/ui && npm install)
