@@ -14,7 +14,7 @@ from mycelium.adapters.embeddings.bootstrap import (
 )
 from mycelium.adapters.store.edge_store import JsonEdgeStore
 from mycelium.adapters.store.symbol_store import JsonSymbolStore
-from mycelium.adapters.store.vector_store import JsonVectorStore
+from mycelium.adapters.store.vector_store import JsonVectorStore, cosine
 from mycelium.adapters.store.workspace_repo import JsonFileWorkspaceRepo, WorkspaceError
 from mycelium.core.domain.node_types import (
     display_kind_for_row,
@@ -68,7 +68,7 @@ def _snippet_for(kind: str, text: str, meta: dict[str, Any]) -> str:
     raw = text or ""
     lines = [ln for ln in raw.splitlines() if ln.strip()]
     if lines and lines[0].lower().startswith(
-        ("code ", "source file", "git commit", "markdown ")
+        ("code ", "source file", "git commit", "markdown ", "conversation ")
     ):
         lines = lines[1:]
     body = "\n".join(lines).strip()
@@ -87,6 +87,11 @@ def _snippet_for(kind: str, text: str, meta: dict[str, Any]) -> str:
             body = body.split("body:", 1)[-1].strip()
         title = meta.get("title") or meta.get("name") or ""
         return (f"{title}\n{body}" if title else body)[:280]
+    if kind == "ThreadChunk":
+        if "body:" in body:
+            body = body.split("body:", 1)[-1].strip()
+        role = str(meta.get("role") or "")
+        return (f"{role}: {body}" if role else body)[:280]
     if "source:" in body:
         body = body.split("source:", 1)[-1].strip()
     return body[:280]
@@ -99,6 +104,12 @@ def _title_for(kind: str, meta: dict[str, Any], node_id: str | None) -> str:
         return str(meta.get("path") or meta.get("name") or node_id or "file")
     if kind == "Note":
         return str(meta.get("title") or meta.get("name") or meta.get("path") or node_id or "note")
+    if kind == "ThreadChunk":
+        role = str(meta.get("role") or "turn")
+        seq = meta.get("turn_seq")
+        if seq is not None:
+            return f"{role}#{seq}"
+        return role
     name = meta.get("name")
     if name:
         return str(name)
@@ -202,6 +213,11 @@ class RagService:
         elif kind == "Note":
             if meta.get("path"):
                 chip_meta.append({"icon": "sticky_note_2", "text": str(meta["path"])})
+        elif kind == "ThreadChunk":
+            if meta.get("thread_id"):
+                chip_meta.append({"icon": "forum", "text": str(meta["thread_id"])})
+            if meta.get("role"):
+                chip_meta.append({"icon": "person", "text": str(meta["role"])})
         return {
             "id": row.get("node_id"),
             "title": title,
@@ -295,6 +311,96 @@ class RagService:
             "count": len(results),
             "results": results,
             "intent_kinds": sorted(intent_kinds(query)),
+            "embedding": {
+                "model_id": self._status.model_id,
+                "backend": self._status.backend,
+            },
+        }
+
+    def query_thread(
+        self,
+        workspace_id: str,
+        thread_id: str,
+        query: str,
+        limit: int = 8,
+    ) -> dict[str, Any]:
+        """Hybrid RAG scoped to ThreadChunk rows for one thread."""
+        self._require(workspace_id)
+        limit = max(1, min(limit, 10))
+        store = JsonVectorStore(self._ws_dir(workspace_id))
+        rows = [
+            r
+            for r in store.all_rows()
+            if display_kind_for_row(r) == "ThreadChunk"
+            and str((r.get("meta") or {}).get("thread_id") or "") == thread_id
+        ]
+        if not rows:
+            return {
+                "query": query,
+                "workspace_id": workspace_id,
+                "thread_id": thread_id,
+                "mode": "thread_rag",
+                "count": 0,
+                "results": [],
+                "reason": "empty_thread_index",
+                "message": "No ThreadChunk embeddings for this thread yet.",
+            }
+
+        qvec = self._runtime.embed([query])[0]
+        by_id = {r["node_id"]: r for r in rows}
+
+        vector_scored: list[tuple[float, str]] = []
+        for row in rows:
+            vec = list(row.get("vector") or [])
+            if len(vec) != len(qvec):
+                continue
+            vector_scored.append((cosine(qvec, vec), row["node_id"]))
+        vector_scored.sort(key=lambda t: t[0], reverse=True)
+        vector_ranked = [nid for _, nid in vector_scored]
+
+        fts_scored: list[tuple[float, str]] = []
+        for row in rows:
+            score = fts_score(query, str(row.get("text") or ""))
+            if score > 0:
+                fts_scored.append((score, row["node_id"]))
+        fts_scored.sort(key=lambda t: t[0], reverse=True)
+        fts_ranked = [nid for _, nid in fts_scored[:80]]
+
+        fused = rrf_fuse([vector_ranked, fts_ranked])
+        ordered = sorted(fused.items(), key=lambda t: t[1], reverse=True)[:limit]
+        vec_rank = {nid: i for i, nid in enumerate(vector_ranked, start=1)}
+        fts_rank = {nid: i for i, nid in enumerate(fts_ranked, start=1)}
+        label = self._workspace_label(workspace_id)
+
+        results = []
+        for node_id, score in ordered:
+            row = by_id.get(node_id)
+            if not row:
+                continue
+            item = self._packet_item(
+                row,
+                score=score,
+                provenance={
+                    "vector_rank": vec_rank.get(node_id),
+                    "fts_rank": fts_rank.get(node_id),
+                    "fusion": "rrf",
+                    "thread_id": thread_id,
+                    "workspace_id": workspace_id,
+                    "workspace_name": label["workspace_name"],
+                },
+            )
+            item.update(label)
+            item["thread_id"] = thread_id
+            results.append(item)
+
+        return {
+            "query": query,
+            "workspace_id": workspace_id,
+            "thread_id": thread_id,
+            "mode": "thread_rag",
+            "scope": "thread",
+            "count": len(results),
+            "results": results,
             "embedding": {
                 "model_id": self._status.model_id,
                 "backend": self._status.backend,

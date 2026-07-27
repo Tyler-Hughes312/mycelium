@@ -342,3 +342,43 @@ class EmbeddingService:
         ]
         written, skipped = store.upsert_many(rows)
         return {"written": written, "skipped_unchanged": skipped, "vectors": store.count()}
+
+    def upsert_nodes(
+        self,
+        workspace_id: str,
+        nodes: list[dict[str, Any]],
+    ) -> tuple[int, int]:
+        """Embed and upsert arbitrary nodes into the workspace vector store.
+
+        Each node: ``id`` or ``node_id``, ``kind``, ``text``, optional ``meta``.
+        Returns ``(written, skipped_unchanged)``.
+        """
+        self._require(workspace_id)
+        if not nodes:
+            return 0, 0
+        store = JsonVectorStore(self._ws_dir(workspace_id))
+        model_id = self._status.model_id
+        prepared: list[tuple[str, str, str, dict[str, Any]]] = []
+        for node in nodes:
+            node_id = str(node.get("node_id") or node.get("id") or "")
+            if not node_id:
+                continue
+            kind = str(node.get("kind") or "Unknown")
+            text = str(node.get("text") or "")
+            meta = dict(node.get("meta") or {})
+            prepared.append((node_id, kind, text, meta))
+        if not prepared:
+            return 0, 0
+        vectors = self._runtime.embed([t for _, _, t, _ in prepared])
+        rows = [
+            {
+                "node_id": node_id,
+                "kind": kind,
+                "text": text,
+                "vector": vec,
+                "model_id": model_id,
+                "meta": meta,
+            }
+            for (node_id, kind, text, meta), vec in zip(prepared, vectors, strict=True)
+        ]
+        return store.upsert_many(rows)

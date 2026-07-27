@@ -6,7 +6,7 @@ import re
 from typing import Any
 
 # Coarse families used for fusion / filters
-FAMILIES = frozenset({"Symbol", "Commit", "File", "Note"})
+FAMILIES = frozenset({"Symbol", "Commit", "File", "Note", "Thread"})
 
 # Fine display kinds shown in Context Packets / UI chips
 DISPLAY_KINDS = frozenset(
@@ -20,6 +20,7 @@ DISPLAY_KINDS = frozenset(
         "File",
         "Commit",
         "Note",
+        "ThreadChunk",
     }
 )
 
@@ -77,6 +78,8 @@ def display_kind_for_row(row: dict[str, Any]) -> str:
         return "File"
     if lower in {"note"}:
         return "Note"
+    if lower in {"threadchunk", "thread_chunk"}:
+        return "ThreadChunk"
     if lower in {"symbol"}:
         return display_kind_from_symbol_kind(str(meta.get("symbol_kind") or meta.get("kind") or ""))
     mapped = _SYMBOL_KIND_MAP.get(lower)
@@ -91,6 +94,8 @@ def display_kind_for_row(row: dict[str, Any]) -> str:
 def family_of(display_kind: str) -> str:
     if display_kind in {"Commit", "File", "Note"}:
         return display_kind
+    if display_kind == "ThreadChunk":
+        return "Thread"
     return "Symbol"
 
 
@@ -106,6 +111,7 @@ def embed_type_prefix(display_kind: str) -> str:
         "File": "source file",
         "Commit": "git commit history entry",
         "Note": "markdown vault note",
+        "ThreadChunk": "conversation thread chunk",
     }
     return labels.get(display_kind, f"code {display_kind.lower()}")
 
