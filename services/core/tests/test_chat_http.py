@@ -116,6 +116,27 @@ def test_threads_crud_list_get_search_handoff(tmp_path: Path) -> None:
         assert "hello mycelium" not in note_body or "Ship chat" in note_body
 
 
+def test_messages_remote_llm_disabled_with_api_key(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("MYCELIUM_LLM_API_KEY", "sk-test-key")
+    cfg = ensure_test_layout(tmp_path / "home")
+    app = create_app(cfg)
+    with TestClient(app) as client:
+        app.state.chat_llm = None
+        ws_id = _register_workspace(client, tmp_path)
+        thread_id = client.post(
+            "/threads", json={"workspace_id": ws_id, "title": "privacy"}
+        ).json()["thread"]["id"]
+
+        resp = client.post(
+            f"/threads/{thread_id}/messages",
+            json={"text": "hi"},
+        )
+        assert resp.status_code == 403
+        err = resp.json()["error"]
+        assert err["code"] == "remote_llm_disabled"
+        assert err["message"]
+
+
 def test_messages_llm_not_configured_error_shape(tmp_path: Path) -> None:
     cfg = ensure_test_layout(tmp_path / "home")
     app = create_app(cfg)

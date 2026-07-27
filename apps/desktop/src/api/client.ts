@@ -109,9 +109,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     let code: string | undefined;
     try {
       const body = (await res.json()) as {
+        error?: { code?: string; message?: string };
         detail?: { code?: string; message?: string } | string;
       };
-      if (typeof body.detail === "string") {
+      if (body.error && typeof body.error === "object") {
+        code = body.error.code;
+        message = body.error.message ?? message;
+      } else if (typeof body.detail === "string") {
         message = body.detail;
       } else if (body.detail && typeof body.detail === "object") {
         code = body.detail.code;
