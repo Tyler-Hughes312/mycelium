@@ -57,6 +57,26 @@ test("hero pitches token efficiency over chat memory", async () => {
   assert.match(blob, /index/);
   assert.match(blob, /not a chat journal|journal/);
   assert.match(blob, /reuse|open/);
+  assert.match(blob, /rag|desktop chat|receipt/);
+});
+
+test("site mentions Desktop Chat RAG window without claiming Cursor rewrite", async () => {
+  const { HERO, OUTCOMES, CAPABILITIES, IMPACT_DISCLAIMER } = await import(
+    "./content.ts"
+  );
+  const blob = [
+    HERO.sub,
+    HERO.proof,
+    ...OUTCOMES.map((o) => `${o.title} ${o.body}`),
+    ...CAPABILITIES.map((c) => `${c.title} ${c.body}`),
+    IMPACT_DISCLAIMER,
+  ]
+    .join(" ")
+    .toLowerCase();
+  assert.match(blob, /desktop chat|rag/);
+  assert.match(blob, /full.?thread|transcript|tail/);
+  assert.match(blob, /cursor/);
+  assert.match(blob, /unchanged|not cursor|host/);
 });
 
 test("vault capability is secondary to code indexing", async () => {

@@ -17,8 +17,8 @@ export const LINKS = {
 export const HERO = {
   brand: "Mycelium",
   headline: "Stop burning tokens re-reading your codebase every session",
-  sub: "Mycelium indexes your repos locally and returns a precise context packet — then a one-line receipt so agents cite what they already retrieved instead of dumping the tree again. Open a project and it starts indexing; before you build, it checks other repos for prior art. Not a chat journal: an efficient path into the code you already have.",
-  proof: "Open → index · Reuse check · Context receipts · Grounded Impact · Private on localhost",
+  sub: "Mycelium indexes your repos locally and returns a precise context packet — then a one-line receipt so agents cite what they already retrieved instead of dumping the tree again. Desktop Chat assembles each model call from prefs + a short tail + RAG hits — never the full transcript. Not a chat journal: an efficient path into the code you already have.",
+  proof: "Open → index · Reuse check · RAG Chat window · Context receipts · Grounded Impact",
   primaryCta: "Download Desktop",
   secondaryCta: "See how it saves tokens",
 } as const;
@@ -39,7 +39,7 @@ export const OUTCOMES: Outcome[] = [
   {
     id: "tokens",
     title: "Spend tokens on the answer, not the haystack",
-    body: "Hybrid search + focus packets pull matching symbols, commits, and notes — instead of re-pasting giant files or re-searching the tree every chat.",
+    body: "Hybrid search + focus packets pull matching symbols, commits, and notes — instead of re-pasting giant files or re-searching the tree every chat. In Desktop Chat, long threads stay bounded: prefs + recent tail + ranked hits only.",
   },
   {
     id: "quality",
@@ -54,12 +54,12 @@ export const OUTCOMES: Outcome[] = [
   {
     id: "scale",
     title: "Cite a receipt — don’t re-dump the repo",
-    body: "Every recall ends with a one-line receipt (paths/ids only). verify_receipt checks staleness without pasting bodies. Impact tracks grounded %.",
+    body: "Every recall ends with a one-line receipt (paths/ids only). Chat shows Context used — what the model actually saw vs full-thread estimate. Impact tracks grounded % and chat savings.",
   },
   {
     id: "local",
     title: "Private by default",
-    body: "Indexes, receipts, and an optional Thinking Vault live on your machine. Desktop and MCP start Core locally — nothing leaves localhost unless you opt in.",
+    body: "Indexes, receipts, threads, and an optional Thinking Vault live on your machine. Desktop and MCP start Core locally — remote LLM is opt-in with your key.",
   },
 ];
 
@@ -69,15 +69,15 @@ export const OUTCOMES_COMPARE = {
   withTitle: "With Mycelium",
   without: [
     "Re-paste the same files every session",
-    "Burn tokens re-reading half the repo",
+    "Replay the whole chat transcript every turn",
     "Rebuild features you already shipped elsewhere",
     "Generic answers that ignore your conventions",
   ],
   with: [
     "Open folder → register + index automatically",
-    "Tight packets + one-line receipts",
+    "Desktop Chat: RAG window, not full-thread replay",
     "reuse_check asks adapt vs greenfield",
-    "Impact: tokens saved and grounded %",
+    "Impact: tokens saved, grounded %, chat savings",
   ],
 } as const;
 
@@ -104,7 +104,7 @@ export const CAPABILITIES: Capability[] = [
   {
     id: "search",
     title: "Search",
-    body: "Hybrid recall: a precise packet of symbols, commits, and files — plus a compact receipt to cite.",
+    body: "Hybrid recall: a precise packet of symbols, commits, and files — plus a compact receipt to cite. Same retrieval powers Desktop Chat’s thread + code hits.",
     wash: "violet",
   },
   {
@@ -116,7 +116,7 @@ export const CAPABILITIES: Capability[] = [
   {
     id: "agents",
     title: "Agents",
-    body: "One install wires Cursor, VS Code, Codex, Claude, and Windsurf. Same MCP tools everywhere: session_start, reuse_check, change/debug context, vault notes, receipts.",
+    body: "One install wires Cursor, VS Code, Codex, Claude, and Windsurf (reuse_check, receipts, context tools). Desktop Chat owns the RAG conversation window — Cursor’s host transcript is unchanged.",
     wash: "amber",
   },
 ];
@@ -135,14 +135,14 @@ export const SETUP_STEPS = [
   {
     n: 3,
     title: "Use",
-    body: "Agents call session_start, then reuse_check before plan/build, then change_context or search — cite the receipt instead of re-pasting files. Browse or edit the vault in Desktop; durable notes only. Watch grounded % on Impact.",
+    body: "Agents call session_start, then reuse_check before plan/build, then change_context or search — cite the receipt instead of re-pasting files. In Desktop, open Chat for long threads with a RAG window, or Impact for grounded % and chat token savings.",
   },
 ] as const;
 
 export const IMPACT_INTRO = {
   eyebrow: "Impact",
   headline: "Token efficiency you can measure — and prove",
-  sub: "Stop burning context on re-reads and greps. Mycelium serves an indexed packet with a receipt. Desktop Impact tracks estimated tokens saved and how often recalls were grounded.",
+  sub: "Stop burning context on re-reads, greps, and full-thread replay. Mycelium serves indexed packets with receipts; Desktop Chat reports assembled vs full-thread tokens. Impact tracks estimated savings and grounded %.",
 } as const;
 
 export type ImpactMetric = {
@@ -157,13 +157,13 @@ export const IMPACT_METRICS: ImpactMetric[] = [
     id: "tokens",
     stat: "~60–90%",
     title: "Fewer context tokens",
-    body: "Illustrative vs dumping whole files: focus/search packets spend the window on the answer, not the haystack.",
+    body: "Illustrative vs dumping whole files: focus/search packets spend the window on the answer, not the haystack. Chat savings are measured separately vs full-thread replay.",
   },
   {
     id: "packet",
     stat: "1 receipt",
     title: "Per recall",
-    body: "A one-line attestation of which hits were served — cite it instead of pasting bodies again.",
+    body: "A one-line attestation of which hits were served — cite it instead of pasting bodies again. Chat’s Context used panel shows the same idea for model prompts.",
   },
   {
     id: "reuse",
@@ -175,9 +175,9 @@ export const IMPACT_METRICS: ImpactMetric[] = [
     id: "grounded",
     stat: "Grounded %",
     title: "Receipt-backed recalls",
-    body: "Desktop Impact shows how often agents used Mycelium packets with a receipt vs flying blind.",
+    body: "Desktop Impact shows how often agents used Mycelium packets with a receipt vs flying blind — plus chat turns that used the RAG window.",
   },
 ];
 
 export const IMPACT_DISCLAIMER =
-  "The ~60–90% figure is illustrative of typical focus/search vs paste-the-file sessions. Desktop Impact tracks live estimated savings and grounded (receipt) rate locally — not LLM billing accuracy, and not yet a published customer benchmark.";
+  "The ~60–90% figure is illustrative of typical focus/search vs paste-the-file sessions. Desktop Chat token savings vs full-thread replay are measured locally when you use Mycelium Chat (not Cursor’s host window). Impact tracks live estimated savings and grounded (receipt) rate — not LLM billing accuracy, and not yet a published customer benchmark.";

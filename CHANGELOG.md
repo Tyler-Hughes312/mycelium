@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Marketing site + README + positioning: Desktop Chat RAG window (honest: does not rewrite Cursor’s host transcript)
 - `install.sh` / `install_cursor_user_config.py` delegate to multi-client installer; post-install points at GETTING-STARTED
 - Design spec `docs/superpowers/specs/2026-07-27-rag-conversation-window-design.md` status → Accepted
 

@@ -10,6 +10,7 @@
 - Headline metrics: **tokens saved**, **grounded %** (receipt-backed recalls), time not spent grepping / pasting files
 - Agent loop: **session_start** → **reuse_check** (plan/build) → task tools → **cite receipt** (no second dump)
 - **Open → index:** Cursor `workspaceOpen` registers + starts indexing when Core is running
+- **Mycelium Chat:** Desktop-owned RAG conversation window (prefs + tail + ranked hits). Does **not** rewrite Cursor’s host transcript
 
 ## What we are not
 

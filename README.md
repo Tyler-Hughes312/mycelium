@@ -31,7 +31,7 @@ Stop burning tokens re-reading and re-searching your codebase every session. Myc
 
 This is **not** a chat journal or “agent memory vault.” Those tools optimize for remembering conversations. Mycelium optimizes for **efficient retrieval from your project structure** — a stronger, more demoable pitch (tokens saved vs paste-the-file / re-grep).
 
-**Agent loop:** `session_start` → **`reuse_check`** (plan/build) → task tools (`change_context` / `debug_context`) → cite the one-line **`receipt=`** instead of re-dumping the repo. Open a git repo in Cursor with Core running and **`workspaceOpen` auto-indexes**. Desktop **Impact** shows **grounded %** (recalls with a receipt vs without).
+**Agent loop:** `session_start` → **`reuse_check`** (plan/build) → task tools (`change_context` / `debug_context`) → cite the one-line **`receipt=`** instead of re-dumping the repo. Open a git repo in Cursor with Core running and **`workspaceOpen` auto-indexes**. Desktop **Chat** assembles each model call from prefs + recent tail + RAG hits (never the full transcript) — Cursor’s host conversation window is unchanged. **Impact** shows **grounded %** and chat token savings.
 
 **Easy setup:** [Desktop + vault + agents](docs/GETTING-STARTED.md) — launch Desktop (vault scaffolds at `~/.mycelium/vault`), run `./scripts/install.sh` once to wire Cursor / VS Code / Codex / Claude / Windsurf.
 
@@ -56,9 +56,10 @@ This is **not** a chat journal or “agent memory vault.” Those tools optimize
 | **Session bootstrap** | `mycelium_session_start` / `preflight` — auto-register repo, optional index, compact brain + open-file focus |
 | **Task-shaped tools** | `mycelium_change_context` / `mycelium_debug_context` — ranked hits for implement vs fix, not raw search lists |
 | **Context receipts** | One-line `receipt=` attestation (paths/ids only) — cite it; `verify_receipt` checks staleness without re-dumping |
-| **Measurable impact** | Desktop **Impact**: tokens/$ saved **and** grounded % (receipt-backed recalls) |
+| **Mycelium Chat (RAG window)** | Desktop Chat: prefs + short tail + ranked thread/code hits — not full-thread replay (does not rewrite Cursor’s window) |
+| **Measurable impact** | Desktop **Impact**: tokens/$ saved, grounded %, and chat savings |
 | **Private by default** | Localhost only; upload / remote LLM are opt-in |
-| **Three surfaces** | Desktop console · editor side panel · agent MCP tools |
+| **Three surfaces** | Desktop console · Chat · editor side panel · agent MCP tools |
 
 **vs agent memory / “context vault” products:** they remember what you *said*. Mycelium retrieves what your *code* already contains. Thinking Vault notes are optional secondary context (decisions, ADRs) — not the core product.
 
