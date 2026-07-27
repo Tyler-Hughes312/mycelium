@@ -95,6 +95,8 @@ class PatchSettingsRequest(BaseModel):
     allow_remote_llm: bool | None = None
     github_client_id: str | None = None
     impact_tracking_enabled: bool | None = None
+    impact_default_model: str | None = None
+    impact_pricing_overrides: dict[str, float] | None = None
 
 
 class GitHubPatRequest(BaseModel):
@@ -661,6 +663,8 @@ def create_app(config: MyceliumConfig | None = None) -> FastAPI:
             allow_remote_llm=body.allow_remote_llm,
             github_client_id=body.github_client_id,
             impact_tracking_enabled=body.impact_tracking_enabled,
+            impact_default_model=body.impact_default_model,
+            impact_pricing_overrides=body.impact_pricing_overrides,
         )
         application.state.mycelium_config = updated
         application.state.github = GitHubService(
