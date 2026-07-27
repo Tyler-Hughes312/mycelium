@@ -171,6 +171,8 @@ def create_app(config: MyceliumConfig | None = None) -> FastAPI:
         impact = ImpactService(
             ImpactStore(cfg.paths.data_dir / "impact_events.json"),
             enabled=cfg.impact.tracking_enabled,
+            default_model=cfg.impact.default_model,
+            pricing_overrides=cfg.impact.pricing_overrides,
         )
         application.state.impact_service = impact
         try:
@@ -672,6 +674,10 @@ def create_app(config: MyceliumConfig | None = None) -> FastAPI:
             client_id=updated.github.client_id,
         )
         impact_service().set_enabled(updated.impact.tracking_enabled)
+        impact_service().set_pricing(
+            default_model=updated.impact.default_model,
+            pricing_overrides=updated.impact.pricing_overrides,
+        )
         # Hot-swap vault + index depth; embedding model change needs Core restart
         runtime = application.state.index_service.embedding_service.runtime
         emb_status = application.state.embedding_status

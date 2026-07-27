@@ -111,3 +111,60 @@ def test_impact_http_records_and_respects_disable(tmp_path: Path) -> None:
             "summary"
         ]
         assert cleared["event_count"] == 0
+
+
+def test_store_summary_includes_usd_and_breakdowns(tmp_path: Path) -> None:
+    store = ImpactStore(tmp_path / "impact_events.json")
+    now = datetime.now(timezone.utc).isoformat()
+    store.append(
+        {
+            "ts": now,
+            "tool": "search",
+            "workspace_id": "ws1",
+            "served_tokens": 10,
+            "baseline_tokens": 110,
+            "tokens_saved": 100,
+            "model_id": "claude-sonnet-4",
+            "model_source": "default",
+            "usd_per_1m_input": 3.0,
+            "usd_saved": 0.0003,
+        }
+    )
+    store.append(
+        {
+            "ts": now,
+            "tool": "focus",
+            "workspace_id": "ws1",
+            "served_tokens": 5,
+            "baseline_tokens": 55,
+            "tokens_saved": 50,
+            "model_id": "claude-sonnet-4",
+            "model_source": "default",
+            "usd_per_1m_input": 3.0,
+            "usd_saved": 0.00015,
+        }
+    )
+    summary = store.summary("all")
+    assert abs(summary["usd_saved"] - 0.00045) < 1e-9
+    tools = {row["tool"]: row for row in summary["by_tool"]}
+    assert tools["search"]["tokens_saved"] == 100
+    assert tools["focus"]["event_count"] == 1
+    models = {row["model_id"]: row for row in summary["by_model"]}
+    assert models["claude-sonnet-4"]["tokens_saved"] == 150
+
+
+def test_legacy_events_usd_defaults_zero(tmp_path: Path) -> None:
+    store = ImpactStore(tmp_path / "impact_events.json")
+    store.append(
+        {
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "tool": "search",
+            "workspace_id": "",
+            "served_tokens": 1,
+            "baseline_tokens": 10,
+            "tokens_saved": 9,
+        }
+    )
+    summary = store.summary("all")
+    assert summary["usd_saved"] == 0.0
+    assert summary["by_model"][0]["model_id"] == ""

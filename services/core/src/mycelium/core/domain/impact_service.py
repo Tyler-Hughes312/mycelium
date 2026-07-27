@@ -7,6 +7,11 @@ from pathlib import Path
 from typing import Any
 
 from mycelium.adapters.store.impact_store import ImpactStore
+from mycelium.core.domain.impact_pricing import (
+    compute_usd_saved,
+    rate_for_model,
+    resolve_model,
+)
 from mycelium.core.domain.vault_service import estimate_tokens
 
 _MAX_FILE_CHARS = 200_000
@@ -39,12 +44,30 @@ def estimate_query_impact(
 
 
 class ImpactService:
-    def __init__(self, store: ImpactStore, *, enabled: bool = True) -> None:
+    def __init__(
+        self,
+        store: ImpactStore,
+        *,
+        enabled: bool = True,
+        default_model: str = "claude-sonnet-4",
+        pricing_overrides: dict[str, float] | None = None,
+    ) -> None:
         self.store = store
         self.enabled = enabled
+        self.default_model = default_model
+        self.pricing_overrides = pricing_overrides
 
     def set_enabled(self, enabled: bool) -> None:
         self.enabled = enabled
+
+    def set_pricing(
+        self,
+        *,
+        default_model: str,
+        pricing_overrides: dict[str, float] | None,
+    ) -> None:
+        self.default_model = default_model
+        self.pricing_overrides = pricing_overrides
 
     def _record(
         self,
@@ -54,9 +77,19 @@ class ImpactService:
         served: int,
         baseline: int,
         saved: int,
+        probe: dict | None = None,
     ) -> None:
         if not self.enabled:
             return
+        model_id, model_source, model_probe = resolve_model(
+            probe=probe,
+            default_model=self.default_model,
+        )
+        usd_per_1m_input = rate_for_model(model_id, self.pricing_overrides)
+        usd_saved = compute_usd_saved(
+            tokens_saved=saved,
+            usd_per_1m_input=usd_per_1m_input,
+        )
         self.store.append(
             {
                 "ts": datetime.now(timezone.utc).isoformat(),
@@ -65,6 +98,11 @@ class ImpactService:
                 "served_tokens": served,
                 "baseline_tokens": baseline,
                 "tokens_saved": saved,
+                "model_id": model_id,
+                "model_source": model_source,
+                "model_probe": model_probe,
+                "usd_per_1m_input": usd_per_1m_input,
+                "usd_saved": usd_saved,
             }
         )
 
