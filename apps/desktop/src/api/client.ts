@@ -341,6 +341,8 @@ export type AppSettings = {
   allow_code_upload: boolean;
   allow_remote_llm: boolean;
   impact_tracking_enabled?: boolean;
+  impact_default_model?: string;
+  impact_pricing_overrides?: Record<string, number>;
   api_token_enabled?: boolean;
   github_client_id?: string;
   github_oauth_configured?: boolean;
@@ -391,6 +393,8 @@ export async function patchSettings(input: {
   allow_remote_llm?: boolean;
   github_client_id?: string;
   impact_tracking_enabled?: boolean;
+  impact_default_model?: string;
+  impact_pricing_overrides?: Record<string, number>;
 }) {
   return request<{
     settings: AppSettings;
@@ -618,6 +622,23 @@ export async function reindexVault(workspaceId?: string) {
   return data.reindex;
 }
 
+export type ImpactModelSource = "inferred" | "default" | "unknown";
+
+export type ImpactByTool = {
+  tool: string;
+  event_count: number;
+  tokens_saved: number;
+  usd_saved: number;
+};
+
+export type ImpactByModel = {
+  model_id: string;
+  model_source_dominant: ImpactModelSource;
+  event_count: number;
+  tokens_saved: number;
+  usd_saved: number;
+};
+
 export type ImpactSummary = {
   range: "today" | "week" | "all";
   event_count: number;
@@ -625,6 +646,9 @@ export type ImpactSummary = {
   baseline_tokens: number;
   tokens_saved: number;
   savings_pct: number;
+  usd_saved?: number;
+  by_tool?: ImpactByTool[];
+  by_model?: ImpactByModel[];
 };
 
 export type ImpactEvent = {
@@ -634,7 +658,27 @@ export type ImpactEvent = {
   served_tokens: number;
   baseline_tokens: number;
   tokens_saved: number;
+  model_id?: string;
+  model_source?: ImpactModelSource;
+  usd_per_1m_input?: number;
+  usd_saved?: number;
 };
+
+export type ImpactPricingRate = {
+  id: string;
+  usd_per_1m_input: number;
+  overridden: boolean;
+};
+
+export type ImpactPricing = {
+  default_model: string;
+  rates: ImpactPricingRate[];
+  disclaimer: string;
+};
+
+export function getImpactPricing() {
+  return request<ImpactPricing>("/impact/pricing");
+}
 
 export function getImpactSummary(range: "today" | "week" | "all" = "all") {
   return request<{ summary: ImpactSummary }>(
