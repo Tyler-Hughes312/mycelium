@@ -28,3 +28,16 @@ test("Chat page wires thread client APIs", () => {
   assert.match(source, /sendThreadMessage/);
   assert.match(source, /handoffThread/);
 });
+
+test("Chat page offers Load older when transcript is truncated", () => {
+  assert.match(source, /Load older/);
+  assert.match(source, /older[\s\S]*messages are hidden/);
+  assert.match(source, /loadOlderTurns/);
+});
+
+test("Chat page links to Settings on LLM config errors", () => {
+  assert.match(source, /llm_not_configured/);
+  assert.match(source, /remote_llm_disabled/);
+  assert.match(source, /to="\/settings"/);
+  assert.match(source, /Open Settings/);
+});

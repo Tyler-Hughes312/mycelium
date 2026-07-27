@@ -147,3 +147,63 @@ def test_index_thread_chunks_upserts_vectors(tmp_path: Path) -> None:
     )
     assert hit["count"] >= 1
     assert hit["results"][0]["id"] == chunks[0]["id"]
+
+
+def test_query_default_excludes_thread_chunks(tmp_path: Path) -> None:
+    """Desktop Search / MCP query must not leak ThreadChunk without kinds opt-in."""
+    data_dir, ws_id, repo = _setup_workspace(tmp_path)
+    embedder = HashingEmbedder()
+    status = _hashing_status()
+    store = JsonVectorStore(data_dir / "workspaces" / ws_id)
+
+    marker = "THREAD_LEAK_BANANA_WIDGET_XYZ"
+    thread_text = f"conversation about {marker}"
+    code_text = f"def widget(): return '{marker}'"
+    store.upsert(
+        node_id="node:thread_chunk:thread:leak:1:0",
+        kind="ThreadChunk",
+        text=thread_text,
+        vector=embedder.embed([thread_text])[0],
+        model_id=HashingEmbedder.model_id,
+        meta={
+            "thread_id": "thread:leak",
+            "turn_seq": 1,
+            "role": "user",
+            "kind": "ThreadChunk",
+            "family": "Thread",
+        },
+    )
+    store.upsert(
+        node_id="node:symbol:demo:widget",
+        kind="Function",
+        text=code_text,
+        vector=embedder.embed([code_text])[0],
+        model_id=HashingEmbedder.model_id,
+        meta={"name": "widget", "path": "demo.py", "symbol_kind": "function"},
+    )
+
+    rag = RagService(
+        data_dir=data_dir,
+        runtime=embedder,
+        status=status,
+        workspace_repo=repo,
+    )
+    default = rag.query(workspace_id=ws_id, query=marker, limit=8)
+    kinds = {r["kind"] for r in default["results"]}
+    assert "ThreadChunk" not in kinds
+    assert not any(
+        str(r.get("id") or "").startswith("node:thread_chunk:")
+        for r in default["results"]
+    )
+
+    opted = rag.query(
+        workspace_id=ws_id,
+        query=marker,
+        limit=8,
+        kinds=["ThreadChunk"],
+    )
+    assert any(r["kind"] == "ThreadChunk" for r in opted["results"])
+    assert any(
+        str(r.get("id") or "").startswith("node:thread_chunk:")
+        for r in opted["results"]
+    )

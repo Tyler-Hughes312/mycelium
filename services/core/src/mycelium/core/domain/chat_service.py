@@ -19,7 +19,7 @@ from mycelium.core.domain.thread_chunking import chunk_turn
 from mycelium.core.domain.thread_index import index_thread_chunks
 from mycelium.core.domain.vault_service import VaultService
 from mycelium.core.ports.llm import LlmProvider
-from mycelium.core.privacy import assert_allow_remote_llm
+from mycelium.core.privacy import PrivacyError, assert_allow_remote_llm
 
 _DEFAULT_SYSTEM = (
     "You are Mycelium Chat. Prefer compact, retrieval-grounded answers. "
@@ -300,7 +300,24 @@ class ChatService:
         if reason:
             assembly = {**assembly, "reason": reason}
 
-        reply = provider.complete(list(assembly.get("messages") or []))
+        try:
+            reply = provider.complete(list(assembly.get("messages") or []))
+        except PrivacyError:
+            raise
+        except ChatError:
+            raise
+        except Exception as exc:
+            # User turn already persisted after resolve — pair it with a short
+            # assistant error so the transcript is not left half-open.
+            err_text = (
+                "Sorry — the language model request failed. "
+                "Check Settings / connectivity and try again."
+            )
+            self._threads.append_turn(thread_id, role="assistant", text=err_text)
+            raise ChatError(
+                "llm_upstream",
+                f"LLM request failed: {exc}",
+            ) from exc
 
         assistant_turn = self._threads.append_turn(
             thread_id, role="assistant", text=reply

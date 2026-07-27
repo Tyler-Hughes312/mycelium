@@ -304,7 +304,12 @@ def create_app(config: MyceliumConfig | None = None) -> FastAPI:
 
     @application.exception_handler(ChatError)
     async def chat_error_handler(_request: Request, exc: ChatError) -> JSONResponse:
-        status = 404 if exc.code == "not_found" else 400
+        if exc.code == "not_found":
+            status = 404
+        elif exc.code == "llm_upstream":
+            status = 502
+        else:
+            status = 400
         return JSONResponse(
             status_code=status,
             content={"error": {"code": exc.code, "message": exc.message}},

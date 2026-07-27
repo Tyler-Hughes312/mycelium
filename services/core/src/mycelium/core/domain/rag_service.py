@@ -432,6 +432,12 @@ class RagService:
 
         intents = intent_kinds(query)
         allow = {k.strip() for k in (kinds or []) if k.strip()} or None
+        # Default: exclude Thread/ThreadChunk from Search / MCP /query so chat
+        # corpus does not leak into code context. Opt in via kinds including
+        # "Thread" or "ThreadChunk" (query_thread remains the chat path).
+        thread_opt_in = bool(
+            allow and ({"Thread", "ThreadChunk"} & allow)
+        )
 
         qvec = self._runtime.embed([query])[0]
         # Search workspace + vault note vectors separately then merge ranks
@@ -464,7 +470,10 @@ class RagService:
             if not row:
                 continue
             kind = display_kind_for_row(row)
-            if allow and kind not in allow and family_of(kind) not in allow:
+            fam = family_of(kind)
+            if not thread_opt_in and (kind == "ThreadChunk" or fam == "Thread"):
+                continue
+            if allow and kind not in allow and fam not in allow:
                 continue
             boosted.append((node_id, score * kind_boost(kind, intents)))
         ordered = sorted(boosted, key=lambda t: t[1], reverse=True)[:limit]

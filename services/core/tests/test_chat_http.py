@@ -158,6 +158,37 @@ def test_messages_llm_not_configured_error_shape(tmp_path: Path) -> None:
         assert err["message"]
 
 
+def test_messages_llm_upstream_returns_502(tmp_path: Path) -> None:
+    cfg = ensure_test_layout(tmp_path / "home")
+    app = create_app(cfg)
+
+    class BoomLlm:
+        def complete(self, messages, *, model=None) -> str:  # type: ignore[no-untyped-def]
+            raise RuntimeError("upstream down")
+
+    with TestClient(app) as client:
+        app.state.chat_llm = BoomLlm()
+        ws_id = _register_workspace(client, tmp_path)
+        thread_id = client.post(
+            "/threads", json={"workspace_id": ws_id, "title": "upstream"}
+        ).json()["thread"]["id"]
+
+        resp = client.post(
+            f"/threads/{thread_id}/messages",
+            json={"text": "hi"},
+        )
+        assert resp.status_code == 502
+        err = resp.json()["error"]
+        assert err["code"] == "llm_upstream"
+
+        got = client.get(f"/threads/{thread_id}")
+        turns = got.json()["turns"]
+        assert len(turns) == 2
+        assert turns[0]["role"] == "user"
+        assert turns[1]["role"] == "assistant"
+        assert "failed" in turns[1]["text"].lower()
+
+
 def test_get_unknown_thread_not_found(tmp_path: Path) -> None:
     cfg = ensure_test_layout(tmp_path / "home")
     with TestClient(create_app(cfg)) as client:

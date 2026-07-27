@@ -33,6 +33,8 @@ function threadLabel(t: ChatThread) {
   return `Thread ${t.id.replace(/^thread:/, "").slice(0, 8)}`;
 }
 
+const TRANSCRIPT_PAGE = 100;
+
 export function ChatPage() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [workspaceId, setWorkspaceId] = useState("");
@@ -40,12 +42,15 @@ export function ChatPage() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [turnCount, setTurnCount] = useState(0);
+  const [turnsOffset, setTurnsOffset] = useState(0);
+  const [loadingOlder, setLoadingOlder] = useState(false);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [creating, setCreating] = useState(false);
   const [loadingThreads, setLoadingThreads] = useState(false);
   const [loadingTurns, setLoadingTurns] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
   const [coreOnline, setCoreOnline] = useState(true);
   const [contextOpen, setContextOpen] = useState(true);
   const [assembly, setAssembly] = useState<ChatAssembly | null>(null);
@@ -57,6 +62,17 @@ export function ChatPage() {
   const menuRef = useRef<HTMLDivElement>(null);
   const transcriptRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
+  const skipScrollRef = useRef(false);
+
+  function setSendError(err: unknown, fallback: string) {
+    if (err instanceof ApiError) {
+      setError(err.message);
+      setErrorCode(err.code ?? null);
+    } else {
+      setError(err instanceof Error ? err.message : fallback);
+      setErrorCode(null);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -135,26 +151,62 @@ export function ChatPage() {
   const loadThread = useCallback(async (threadId: string) => {
     setLoadingTurns(true);
     setError(null);
+    setErrorCode(null);
     try {
-      const detail = await getThread(threadId, 0, 200);
+      // Load newest page: probe count, then fetch trailing window.
+      const probe = await getThread(threadId, 0, TRANSCRIPT_PAGE);
+      const total = probe.turn_count ?? probe.turns?.length ?? 0;
+      const offset = Math.max(0, total - TRANSCRIPT_PAGE);
+      const detail =
+        offset > 0
+          ? await getThread(threadId, offset, TRANSCRIPT_PAGE)
+          : probe;
       setTurns(detail.turns ?? []);
-      setTurnCount(detail.turn_count ?? detail.turns?.length ?? 0);
+      setTurnCount(total);
+      setTurnsOffset(offset);
       if (detail.last_receipt_items?.length) {
         setReceiptItems(detail.last_receipt_items);
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to load thread");
+      setSendError(err, "Failed to load thread");
       setTurns([]);
       setTurnCount(0);
+      setTurnsOffset(0);
     } finally {
       setLoadingTurns(false);
     }
   }, []);
 
+  const loadOlderTurns = useCallback(async () => {
+    if (!activeId || turnsOffset <= 0 || loadingOlder) return;
+    setLoadingOlder(true);
+    setError(null);
+    setErrorCode(null);
+    const el = transcriptRef.current;
+    const prevHeight = el?.scrollHeight ?? 0;
+    try {
+      const olderLimit = Math.min(TRANSCRIPT_PAGE, turnsOffset);
+      const olderOffset = turnsOffset - olderLimit;
+      const detail = await getThread(activeId, olderOffset, olderLimit);
+      skipScrollRef.current = true;
+      setTurns((prev) => [...(detail.turns ?? []), ...prev]);
+      setTurnsOffset(olderOffset);
+      requestAnimationFrame(() => {
+        if (!el) return;
+        el.scrollTop = el.scrollHeight - prevHeight;
+      });
+    } catch (err: unknown) {
+      setSendError(err, "Failed to load older messages");
+    } finally {
+      setLoadingOlder(false);
+    }
+  }, [activeId, turnsOffset, loadingOlder]);
+
   useEffect(() => {
     if (!activeId) {
       setTurns([]);
       setTurnCount(0);
+      setTurnsOffset(0);
       setAssembly(null);
       setReceiptItems([]);
       setNudgeHandoff(false);
@@ -168,6 +220,10 @@ export function ChatPage() {
   }, [activeId, loadThread]);
 
   useEffect(() => {
+    if (skipScrollRef.current) {
+      skipScrollRef.current = false;
+      return;
+    }
     const el = transcriptRef.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
@@ -180,19 +236,21 @@ export function ChatPage() {
     if (!workspaceId || !coreOnline) return;
     setCreating(true);
     setError(null);
+    setErrorCode(null);
     try {
       const thread = await createThread(workspaceId, "");
       setThreads((prev) => [thread, ...prev]);
       setActiveId(thread.id);
       setTurns([]);
       setTurnCount(0);
+      setTurnsOffset(0);
       setAssembly(null);
       setReceiptItems([]);
       setNudgeHandoff(false);
       setHandoffNote(null);
       composerRef.current?.focus();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to create thread");
+      setSendError(err, "Failed to create thread");
     } finally {
       setCreating(false);
     }
@@ -204,6 +262,7 @@ export function ChatPage() {
     if (!text || !activeId || !coreOnline || sending) return;
     setSending(true);
     setError(null);
+    setErrorCode(null);
     const optimistic: ChatTurn = {
       id: `local:${Date.now()}`,
       role: "user",
@@ -232,13 +291,15 @@ export function ChatPage() {
         ),
       );
     } catch (err: unknown) {
-      setTurns((prev) => prev.filter((t) => t.id !== optimistic.id));
-      setDraft(text);
-      if (err instanceof ApiError) {
-        setError(err.message);
+      const code = err instanceof ApiError ? err.code : undefined;
+      // llm_upstream persists user + short error assistant turns — reload.
+      if (code === "llm_upstream" && activeId) {
+        await loadThread(activeId);
       } else {
-        setError(err instanceof Error ? err.message : "Send failed");
+        setTurns((prev) => prev.filter((t) => t.id !== optimistic.id));
+        setDraft(text);
       }
+      setSendError(err, "Send failed");
     } finally {
       setSending(false);
     }
@@ -248,13 +309,14 @@ export function ChatPage() {
     if (!activeId || handoffBusy) return;
     setHandoffBusy(true);
     setError(null);
+    setErrorCode(null);
     try {
       const res = await handoffThread(activeId);
       const path = res.handoff_path || res.path || res.note?.path || null;
       setHandoffNote(path);
       setNudgeHandoff(false);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Handoff failed");
+      setSendError(err, "Handoff failed");
     } finally {
       setHandoffBusy(false);
     }
@@ -410,8 +472,19 @@ export function ChatPage() {
         </header>
 
         {error && (
-          <div className="shrink-0 px-6 py-2 border-b border-border/60 bg-surface-container-low">
-            <p className="font-body-sm text-body-sm text-danger">{error}</p>
+          <div className="shrink-0 px-6 py-2 border-b border-border/60 bg-surface-container-low flex flex-wrap items-center gap-3">
+            <p className="font-body-sm text-body-sm text-danger flex-1 min-w-0">
+              {error}
+            </p>
+            {(errorCode === "llm_not_configured" ||
+              errorCode === "remote_llm_disabled") && (
+              <Link
+                to="/settings"
+                className="shrink-0 font-label-md text-label-md text-primary underline-offset-2 hover:underline"
+              >
+                Open Settings
+              </Link>
+            )}
           </div>
         )}
 
@@ -494,30 +567,48 @@ export function ChatPage() {
               </p>
             </section>
           ) : (
-            turns.map((turn) => {
-              const isUser = turn.role === "user";
-              return (
-                <div
-                  key={turn.id}
-                  className={`flex ${isUser ? "justify-end" : "justify-start"}`}
-                >
-                  <div
-                    className={`max-w-[85%] rounded-xl px-md py-sm space-y-1 ${
-                      isUser
-                        ? "bg-accent-dim text-on-surface shadow-[inset_0_0_0_1px_rgba(0,209,178,0.28)]"
-                        : "bg-surface-container-lowest border border-border"
-                    }`}
+            <>
+              {turnsOffset > 0 && (
+                <div className="flex flex-col items-center gap-2 py-2">
+                  <p className="font-body-sm text-body-sm text-muted text-center">
+                    Showing newest {turns.length} of {turnCount} messages — older
+                    messages are hidden.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => void loadOlderTurns()}
+                    disabled={loadingOlder || !coreOnline}
+                    className="h-8 px-3 rounded-lg border border-border bg-surface-container-high font-label-md text-label-md text-on-surface hover:border-primary/40 disabled:opacity-40"
                   >
-                    <p className="font-label-caps text-label-caps text-muted uppercase tracking-wider">
-                      {isUser ? "You" : "Assistant"}
-                    </p>
-                    <p className="font-body-sm text-body-sm text-on-surface whitespace-pre-wrap break-words">
-                      {turn.text}
-                    </p>
-                  </div>
+                    {loadingOlder ? "Loading…" : "Load older"}
+                  </button>
                 </div>
-              );
-            })
+              )}
+              {turns.map((turn) => {
+                const isUser = turn.role === "user";
+                return (
+                  <div
+                    key={turn.id}
+                    className={`flex ${isUser ? "justify-end" : "justify-start"}`}
+                  >
+                    <div
+                      className={`max-w-[85%] rounded-xl px-md py-sm space-y-1 ${
+                        isUser
+                          ? "bg-accent-dim text-on-surface shadow-[inset_0_0_0_1px_rgba(0,209,178,0.28)]"
+                          : "bg-surface-container-lowest border border-border"
+                      }`}
+                    >
+                      <p className="font-label-caps text-label-caps text-muted uppercase tracking-wider">
+                        {isUser ? "You" : "Assistant"}
+                      </p>
+                      <p className="font-body-sm text-body-sm text-on-surface whitespace-pre-wrap break-words">
+                        {turn.text}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </>
           )}
           {sending && (
             <p className="font-body-sm text-body-sm text-muted">Thinking…</p>

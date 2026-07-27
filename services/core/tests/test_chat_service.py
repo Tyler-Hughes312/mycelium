@@ -248,6 +248,26 @@ def test_index_stale_falls_back_to_tail_only(tmp_path: Path, monkeypatch: pytest
     assert blob.count("filler words") < 120
 
 
+def test_llm_upstream_failure_appends_error_turn(tmp_path: Path) -> None:
+    """complete() failure → ChatError(llm_upstream) + short assistant error turn."""
+    chat, threads, ws_id, _home = _build_chat(tmp_path)
+    t = threads.create(workspace_id=ws_id, title="upstream-fail")
+
+    class BoomLlm:
+        def complete(self, messages, *, model=None) -> str:  # type: ignore[no-untyped-def]
+            raise RuntimeError("connection reset by peer")
+
+    with pytest.raises(ChatError) as ei:
+        chat.send_message(t["id"], "hello upstream", llm=BoomLlm())
+    assert ei.value.code == "llm_upstream"
+    turns = threads.list_turns(t["id"])
+    assert len(turns) == 2
+    assert turns[0]["role"] == "user"
+    assert turns[0]["text"] == "hello upstream"
+    assert turns[1]["role"] == "assistant"
+    assert "failed" in turns[1]["text"].lower()
+
+
 def test_handoff_note_has_no_full_transcript(tmp_path: Path) -> None:
     chat, threads, ws_id, home = _build_chat(tmp_path)
     t = threads.create(workspace_id=ws_id, title="handoff-demo")
