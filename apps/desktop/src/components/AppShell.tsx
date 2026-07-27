@@ -24,6 +24,7 @@ const mainNav = [
   { to: "/", label: "Library", icon: "folder_open", end: true },
   { to: "/index", label: "Index", icon: "hub", end: false },
   { to: "/search", label: "Search", icon: "search", end: false },
+  { to: "/chat", label: "Chat", icon: "chat", end: false },
   { to: "/impact", label: "Impact", icon: "monitoring", end: false },
   { to: "/vault", label: "Vault", icon: "book_2", end: false },
   { to: "/settings", label: "Settings", icon: "tune", end: false },

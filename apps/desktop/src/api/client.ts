@@ -704,3 +704,129 @@ export function getImpactEvents(limit = 50) {
 export function clearImpactEvents() {
   return request<{ cleared: boolean }>("/impact/events", { method: "DELETE" });
 }
+
+export type ChatAssembly = {
+  tokens_assembled: number;
+  tokens_full_thread_est: number;
+  tokens_saved_est: number;
+  truncated: boolean;
+  reason?: string | null;
+  budgets: Record<string, number>;
+  included_hit_ids: string[];
+  included_turn_seqs?: number[];
+  messages_preview?: { role: string; text: string }[];
+};
+
+export type ChatReceiptItem = {
+  id: string;
+  path: string;
+  kind: string;
+  title: string;
+};
+
+export type ChatReceipt = {
+  id: string;
+  item_count: number;
+  served_tokens: number;
+  items?: ChatReceiptItem[];
+  tool?: string;
+  workspace_id?: string;
+  head?: string | null;
+};
+
+export type ChatTurn = {
+  id: string;
+  role: string;
+  text: string;
+  seq: number;
+  created_at?: string;
+  tokens_est?: number;
+};
+
+export type ChatThread = {
+  id: string;
+  workspace_id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  turn_count?: number;
+};
+
+export type ChatThreadDetail = ChatThread & {
+  turns: ChatTurn[];
+  offset: number;
+  limit: number;
+  turn_count: number;
+  last_receipt_id?: string;
+  last_receipt_items?: ChatReceiptItem[];
+};
+
+export type ChatMessageResponse = {
+  assistant: ChatTurn;
+  receipt: ChatReceipt;
+  assembly: ChatAssembly;
+  nudge_handoff?: boolean;
+};
+
+export type ChatHandoffResponse = {
+  handoff_path?: string;
+  path?: string;
+  note?: VaultNote;
+};
+
+/** Thread ids contain `:` — leave unencoded so FastAPI path matching works. */
+function threadPath(threadId: string) {
+  return `/threads/${threadId}`;
+}
+
+export async function createThread(workspaceId: string, title = "") {
+  const data = await request<{ thread: ChatThread }>("/threads", {
+    method: "POST",
+    body: JSON.stringify({ workspace_id: workspaceId, title }),
+  });
+  return data.thread;
+}
+
+export async function listThreads(workspaceId?: string) {
+  const q = workspaceId
+    ? `?workspace_id=${encodeURIComponent(workspaceId)}`
+    : "";
+  const data = await request<{ threads: ChatThread[]; count: number }>(
+    `/threads${q}`,
+  );
+  return data.threads;
+}
+
+export function getThread(threadId: string, offset = 0, limit = 100) {
+  return request<ChatThreadDetail>(
+    `${threadPath(threadId)}?offset=${offset}&limit=${limit}`,
+  );
+}
+
+export function sendThreadMessage(
+  threadId: string,
+  text: string,
+  opts?: { include_code_rag?: boolean },
+) {
+  return request<ChatMessageResponse>(`${threadPath(threadId)}/messages`, {
+    method: "POST",
+    body: JSON.stringify({
+      text,
+      include_code_rag: opts?.include_code_rag ?? true,
+    }),
+  });
+}
+
+export function searchThread(threadId: string, query: string, limit = 8) {
+  return request<QueryResponse>(`${threadPath(threadId)}/search`, {
+    method: "POST",
+    body: JSON.stringify({ query, limit }),
+  });
+}
+
+export function handoffThread(threadId: string, summary?: string) {
+  return request<ChatHandoffResponse>(`${threadPath(threadId)}/handoff`, {
+    method: "POST",
+    body: JSON.stringify({ summary: summary ?? null }),
+  });
+}

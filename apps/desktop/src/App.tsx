@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
+import { ChatPage } from "./pages/ChatPage";
 import { ImpactPage } from "./pages/ImpactPage";
 import { IndexPage } from "./pages/IndexPage";
 import { LibraryPage } from "./pages/LibraryPage";
@@ -15,6 +16,7 @@ export default function App() {
           <Route index element={<LibraryPage />} />
           <Route path="index" element={<IndexPage />} />
           <Route path="search" element={<SearchPage />} />
+          <Route path="chat" element={<ChatPage />} />
           <Route path="impact" element={<ImpactPage />} />
           <Route path="vault" element={<VaultPage />} />
           <Route path="settings" element={<SettingsPage />} />
