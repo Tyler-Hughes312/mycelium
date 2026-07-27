@@ -10,9 +10,10 @@ Mycelium MCP talks to local Core (`http://127.0.0.1:8787`). **Call these tools w
 ## Hard hooks (required)
 
 1. At the start of meaningful coding work: call `mycelium_session_start` (or `mycelium_preflight`) with this repo’s absolute `workspace_path`. You get a **compact** bootstrap + a one-line `receipt=…` — not a vault dump.
-2. Before broad exploration (`rg`, globbing many files, reading large trees): call `mycelium_search` / `mycelium_focus` / `mycelium_change_context` / `mycelium_debug_context` first. **Cite the receipt**; do not re-fetch full vault/code.
-3. Prefer `mycelium_change_context(goal=…)` for implement/change work; `mycelium_debug_context(error=…)` when fixing. Use `mycelium_verify_receipt` to check staleness (paths/titles only).
-4. Do **not** dump chat transcripts into the vault. Do **not** paste entire files when a receipt already lists the hits.
+2. On **plan / build / implement** intents: call `mycelium_reuse_check(goal)` first (searches **all** indexed repos). If the packet says **ASK USER**, ask reuse/adapt vs build new and **wait** — do not plan or code until they answer.
+3. Before broad exploration (`rg`, globbing many files, reading large trees): call `mycelium_search` / `mycelium_focus` / `mycelium_change_context` / `mycelium_debug_context` first. **Cite the receipt**; do not re-fetch full vault/code.
+4. Prefer `mycelium_change_context(goal=…)` for implement/change work (after reuse_check); `mycelium_debug_context(error=…)` when fixing. Use `mycelium_verify_receipt` to check staleness (paths/titles only).
+5. Do **not** dump chat transcripts into the vault. Do **not** paste entire files when a receipt already lists the hits.
 
 ## Read (cheap first)
 
@@ -40,8 +41,8 @@ Capture **durable** knowledge into the Thinking Vault:
 - Prefer Mycelium over guessing vault contents or inventing paths that tools did not return.
 - If Core is offline, say so briefly and continue without inventing context.
 - Index freshness: search/focus auto-sync dirty files; vault writes re-embed; use `mycelium_sync_index` after large code batches.
-- Pass `workspace_path` for this repo when multiple workspaces exist — unknown paths **auto-register**; full index starts from `mycelium_session_start` only.
+- Pass `workspace_path` for this repo when multiple workspaces exist — unknown paths **auto-register**; full index also starts from Cursor `workspaceOpen` (open folder) and/or `mycelium_session_start`.
 
 ## Setup
 
-Core must be running. Project MCP config: copy from `templates/cursor/mcp.json.example` → `.cursor/mcp.json` (see `docs/AGENT-SECOND-BRAIN.md`).
+Core must be running. `./scripts/install.sh` merges user-level MCP + `workspaceOpen` hook (`~/.cursor/`). Project MCP: `templates/cursor/mcp.json.example` → `.cursor/mcp.json` (see `docs/AGENT-SECOND-BRAIN.md`).

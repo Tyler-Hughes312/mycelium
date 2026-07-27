@@ -1,12 +1,12 @@
 export const LINKS = {
   /** Release notes / other platforms. */
-  releases: "https://github.com/Tyler-Hughes312/mycelium/releases/tag/v0.1.2-desktop",
+  releases: "https://github.com/Tyler-Hughes312/mycelium/releases/tag/v0.1.3-desktop",
   /**
    * Same-origin Desktop DMG — fetched into public/downloads at build time
    * so Download CTAs save the file instead of opening GitHub.
    */
-  desktopDownload: "/downloads/Mycelium_0.1.2_aarch64.dmg",
-  desktopFilename: "Mycelium_0.1.2_aarch64.dmg",
+  desktopDownload: "/downloads/Mycelium_0.1.3_aarch64.dmg",
+  desktopFilename: "Mycelium_0.1.3_aarch64.dmg",
   github: "https://github.com/Tyler-Hughes312/mycelium",
   desktopInstallDoc:
     "https://github.com/Tyler-Hughes312/mycelium/blob/main/docs/DESKTOP-INSTALL.md",
@@ -15,8 +15,8 @@ export const LINKS = {
 export const HERO = {
   brand: "Mycelium",
   headline: "Stop burning tokens re-reading your codebase every session",
-  sub: "Mycelium indexes your repos locally and returns a precise context packet — then a one-line receipt so agents cite what they already retrieved instead of dumping the tree again. Not a chat journal: an efficient path into the code you already have.",
-  proof: "Tight packets · Context receipts · Grounded Impact · Private on localhost",
+  sub: "Mycelium indexes your repos locally and returns a precise context packet — then a one-line receipt so agents cite what they already retrieved instead of dumping the tree again. Open a project and it starts indexing; before you build, it checks other repos for prior art. Not a chat journal: an efficient path into the code you already have.",
+  proof: "Open → index · Reuse check · Context receipts · Grounded Impact · Private on localhost",
   primaryCta: "Download Desktop",
   secondaryCta: "See how it saves tokens",
 } as const;
@@ -41,13 +41,13 @@ export const OUTCOMES: Outcome[] = [
   },
   {
     id: "quality",
-    title: "Session bootstrap for agents",
-    body: "mycelium_session_start auto-registers the repo, optionally indexes, and returns a compact prefs + open-file packet — not a vault dump or chat transcript.",
+    title: "Open a repo — indexing starts",
+    body: "With Desktop (or Core) running, Cursor’s workspaceOpen hook registers the git repo and starts a full index. session_start still returns the compact prefs + open-file packet when agents begin work.",
   },
   {
     id: "reuse",
-    title: "Task-shaped context, not raw search lists",
-    body: "change_context and debug_context return ranked hits for implement vs fix — so agents pick the right tool instead of grepping forever.",
+    title: "Reuse check before you build",
+    body: "mycelium_reuse_check searches all indexed repos for similar prior art. If something matches, agents ask: adapt that code, or build new — so you reuse what you already shipped.",
   },
   {
     id: "scale",
@@ -68,13 +68,13 @@ export const OUTCOMES_COMPARE = {
   without: [
     "Re-paste the same files every session",
     "Burn tokens re-reading half the repo",
-    "Agents grep blindly with no shared world model",
+    "Rebuild features you already shipped elsewhere",
     "Generic answers that ignore your conventions",
   ],
   with: [
-    "One indexed path to the relevant slice",
+    "Open folder → register + index automatically",
     "Tight packets + one-line receipts",
-    "Session bootstrap + task-shaped tools",
+    "reuse_check asks adapt vs greenfield",
     "Impact: tokens saved and grounded %",
   ],
 } as const;
@@ -96,7 +96,7 @@ export const CAPABILITIES: Capability[] = [
   {
     id: "index",
     title: "Index",
-    body: "Local embeddings of symbols, files, and commits under ~/.mycelium — built for code, not transcripts.",
+    body: "Local embeddings of symbols, files, and commits under ~/.mycelium — built for code, not transcripts. Open a Cursor workspace and indexing can start automatically.",
     wash: "sage",
   },
   {
@@ -114,7 +114,7 @@ export const CAPABILITIES: Capability[] = [
   {
     id: "agents",
     title: "Agents",
-    body: "MCP: session_start, change/debug context, receipts — agents get relevant packets, not another window dump.",
+    body: "MCP: session_start, reuse_check, change/debug context, receipts — agents get relevant packets and ask before rebuilding prior art.",
     wash: "amber",
   },
 ];
@@ -123,17 +123,17 @@ export const SETUP_STEPS = [
   {
     n: 1,
     title: "Install",
-    body: "Download Desktop 0.1.2 from Releases, or add the Mycelium MCP server in Cursor / Claude.",
+    body: "Download Desktop 0.1.3 from Releases, or add the Mycelium MCP server in Cursor / Claude.",
   },
   {
     n: 2,
     title: "Open",
-    body: "Launch Desktop or connect MCP — Core starts automatically on localhost.",
+    body: "Launch Desktop so Core is on localhost. Open any git repo in Cursor — it can auto-register and start indexing.",
   },
   {
     n: 3,
     title: "Use",
-    body: "Call session_start on your repo, then change_context or search — cite the receipt instead of re-pasting files. Watch grounded % on Desktop Impact.",
+    body: "Agents call session_start, then reuse_check before plan/build, then change_context or search — cite the receipt instead of re-pasting files. Watch grounded % on Desktop Impact.",
   },
 ] as const;
 
@@ -166,8 +166,8 @@ export const IMPACT_METRICS: ImpactMetric[] = [
   {
     id: "reuse",
     stat: "Library-wide",
-    title: "Skip the re-grep",
-    body: "Find the auth helper, fixture, or ADR you already shipped in another imported repo — without hunting the tree.",
+    title: "Skip the rebuild",
+    body: "reuse_check finds the auth helper, fixture, or flow you already shipped in another indexed repo — then asks adapt vs greenfield.",
   },
   {
     id: "grounded",

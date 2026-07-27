@@ -44,6 +44,7 @@ When the MCP client sends a recognizable model id in request `_meta` (e.g. `mode
 | `mycelium_list_workspaces` | Registered repos |
 | `mycelium_session_start` | Session bootstrap (register + optional index + brain pack + open-file focus) |
 | `mycelium_preflight` | Thin alias of session_start (smaller brain budget) |
+| `mycelium_reuse_check` | Cross-repo prior art before plan/build — ASK reuse vs new when strong hits |
 | `mycelium_verify_receipt` | Check receipt valid/stale — paths/titles only, no bodies |
 | `mycelium_change_context` | Task packet for implementing a change |
 | `mycelium_debug_context` | Task packet for fixing an error |
@@ -59,7 +60,7 @@ When the MCP client sends a recognizable model id in request `_meta` (e.g. `mode
 | `mycelium_sync_index` | Sync dirty code files + optional vault reindex |
 | `mycelium_commits_for_path` | Commits touching a path |
 
-**Hard hooks:** call `mycelium_session_start` / `mycelium_preflight` at the start of meaningful work; use search/focus/task tools before broad grepping. Packets end with a one-line `receipt=` — cite it; use `mycelium_verify_receipt` instead of re-dumping. Unknown `workspace_path` auto-registers; full index starts from session_start only (`ensure_index=true`).
+**Hard hooks:** call `mycelium_session_start` / `mycelium_preflight` at the start of meaningful work; on plan/build call `mycelium_reuse_check` first (ask reuse vs new if strong hits); use search/focus/task tools before broad grepping. Packets end with a one-line `receipt=` — cite it; use `mycelium_verify_receipt` instead of re-dumping. Unknown `workspace_path` auto-registers. Full index starts from the Cursor **`workspaceOpen` hook** (open folder → register + index) and/or `session_start` / `preflight` when `ensure_index=true`.
 
 **Read (token-saving):** session bootstrap → `mycelium_vault_tree` → `mycelium_vault_pack(bucket)` → `mycelium_get_note` only if needed.
 
@@ -83,6 +84,8 @@ Prefer PATH / absolute binary (**no `PYTHONPATH`**):
 ```
 
 If the IDE does not see your shell PATH, set `command` to `…/venv/bin/mycelium-mcp`.
+
+`./scripts/install.sh` also merges Mycelium into **user-level** `~/.cursor/mcp.json` and installs a `workspaceOpen` hook (`~/.mycelium/bin/cursor-workspace-open`) so opening any git repo registers + indexes against Core (fail-open if Core is down). Template: `templates/cursor/hooks.json`.
 
 See `templates/cursor/mcp.json.example` and `docs/DEPLOY.md`.
 

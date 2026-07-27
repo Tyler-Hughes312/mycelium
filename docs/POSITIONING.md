@@ -8,7 +8,8 @@
 - Indexes **repos** (symbols, files, commits) under `~/.mycelium`
 - Returns a **precise context packet** to Cursor / Claude (MCP) and Desktop
 - Headline metrics: **tokens saved**, **grounded %** (receipt-backed recalls), time not spent grepping / pasting files
-- Agent loop: **session_start** → task tools → **cite receipt** (no second dump)
+- Agent loop: **session_start** → **reuse_check** (plan/build) → task tools → **cite receipt** (no second dump)
+- **Open → index:** Cursor `workspaceOpen` registers + starts indexing when Core is running
 
 ## What we are not
 

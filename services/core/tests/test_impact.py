@@ -214,3 +214,29 @@ def test_legacy_events_usd_defaults_zero(tmp_path: Path) -> None:
     summary = store.summary("all")
     assert summary["usd_saved"] == 0.0
     assert summary["by_model"][0]["model_id"] == ""
+
+
+def test_backfill_pricing_fills_legacy_events(tmp_path: Path) -> None:
+    store = ImpactStore(tmp_path / "impact_events.json")
+    store.append(
+        {
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "tool": "search",
+            "workspace_id": "",
+            "served_tokens": 1,
+            "baseline_tokens": 1_000_001,
+            "tokens_saved": 1_000_000,
+        }
+    )
+    changed = store.backfill_pricing(
+        default_model="claude-sonnet-4",
+        usd_per_1m_input=3.0,
+    )
+    assert changed == 1
+    summary = store.summary("all")
+    assert abs(summary["usd_saved"] - 3.0) < 1e-9
+    assert summary["by_model"][0]["model_id"] == "claude-sonnet-4"
+    # Idempotent
+    assert store.backfill_pricing(
+        default_model="claude-sonnet-4", usd_per_1m_input=3.0
+    ) == 0

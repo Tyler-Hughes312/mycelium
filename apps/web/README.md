@@ -1,6 +1,8 @@
 # mycelium-web
 
-Marketing site for Mycelium — local-first **indexed codebase retrieval** for AI-heavy developers (token efficiency, not chat-memory vaults). Live at [getmycelium.vercel.app](https://getmycelium.vercel.app). See [docs/POSITIONING.md](../../docs/POSITIONING.md).
+Marketing site for Mycelium — local-first **indexed codebase retrieval** for AI-heavy developers (token efficiency, not chat-memory vaults). Live at [getmycelium.vercel.app](https://getmycelium.vercel.app).
+
+Product copy lives in [`src/content.ts`](./src/content.ts). Keep it aligned with [docs/POSITIONING.md](../../docs/POSITIONING.md) and the root README: **open → index**, **reuse_check**, receipts, illustrative Impact metrics.
 
 ## Develop
 

@@ -137,6 +137,135 @@ def format_bootstrap(
     return _with_receipt("\n".join(lines).rstrip() + "\n", receipt=receipt)
 
 
+_JUNK_PATH_MARKERS = (
+    "/target/",
+    "/node_modules/",
+    "/.venv/",
+    "/venv/",
+    "/_internal/",
+    "/dist/",
+    "/build/",
+    ".egg-info/",
+)
+
+_CODE_KINDS = frozenset({"symbol", "file", "function", "class", "method"})
+
+
+def is_junk_path(path: str | None) -> bool:
+    p = "/" + (path or "").replace("\\", "/").lower().lstrip("/")
+    return any(marker in p for marker in _JUNK_PATH_MARKERS)
+
+
+def is_code_like_hit(row: dict[str, Any]) -> bool:
+    kind = str(row.get("kind") or "").strip().lower()
+    if kind not in _CODE_KINDS:
+        return False
+    return not is_junk_path(str(row.get("path") or ""))
+
+
+def classify_reuse_hits(
+    results: list[dict[str, Any]],
+    *,
+    current_workspace_id: str | None = None,
+    current_workspace_path: str | None = None,
+) -> dict[str, Any]:
+    """Split prior-art hits and decide whether the agent must ask reuse vs new."""
+    current_id = (current_workspace_id or "").strip()
+    current_path = (current_workspace_path or "").rstrip("/")
+
+    def _is_current(row: dict[str, Any]) -> bool:
+        wid = str(row.get("workspace_id") or "").strip()
+        if current_id and wid and wid == current_id:
+            return True
+        wpath = str(row.get("workspace_path") or row.get("repo_path") or "").rstrip("/")
+        if current_path and wpath and (
+            wpath == current_path
+            or current_path.startswith(wpath + "/")
+            or wpath.endswith(current_path)
+        ):
+            return True
+        # Fallback: workspace_name alone is not reliable for "current"
+        return False
+
+    other: list[dict[str, Any]] = []
+    local: list[dict[str, Any]] = []
+    for row in results:
+        if not is_code_like_hit(row):
+            continue
+        if current_id or current_path:
+            if _is_current(row):
+                local.append(row)
+            else:
+                other.append(row)
+        else:
+            # No current workspace → treat all code-like hits as "other" (cross-repo ask)
+            other.append(row)
+
+    strong = bool(other) or len(local) >= 2
+    return {
+        "other": other,
+        "local": local,
+        "strong": strong,
+        "code_like_count": len(other) + len(local),
+    }
+
+
+def format_reuse_packet(
+    goal: str,
+    *,
+    query_packet: dict[str, Any],
+    current_workspace_id: str | None = None,
+    current_workspace_path: str | None = None,
+) -> str:
+    """Compact prior-art packet: ask reuse vs new when strong hits exist."""
+    results = list(query_packet.get("results") or [])
+    classified = classify_reuse_hits(
+        results,
+        current_workspace_id=current_workspace_id,
+        current_workspace_path=current_workspace_path,
+    )
+    other = compact_results(classified["other"], max_items=6)
+    local = compact_results(classified["local"], max_items=6)
+
+    lines = [
+        f"# Reuse check: {goal}",
+        f"scope=all_workspaces strong={classified['strong']} "
+        f"other={len(classified['other'])} local={len(classified['local'])}",
+        "",
+    ]
+
+    def _emit(section: str, rows: list[dict[str, Any]]) -> None:
+        lines.append(f"## {section}")
+        if not rows:
+            lines.append("(none)")
+            lines.append("")
+            return
+        for i, row in enumerate(rows, start=1):
+            repo = row.get("workspace_name")
+            prefix = f"@{repo} " if repo else ""
+            lines.append(
+                f"{i}. {prefix}[{row.get('kind')}] {row.get('title')} — {row.get('path')}"
+            )
+            if row.get("snippet"):
+                lines.append(f"   {row['snippet']}")
+        lines.append("")
+
+    _emit("Other repos", other)
+    _emit("This repo", local)
+
+    lines.append("## Decision")
+    if classified["strong"]:
+        lines.append(
+            "ASK USER: Similar work found. Reuse/adapt that code, or build new? "
+            "Do not plan or implement until they answer."
+        )
+    else:
+        lines.append("No strong prior art — proceed greenfield.")
+    lines.append("")
+
+    return _with_receipt("\n".join(lines).rstrip() + "\n", query_packet)
+
+
 def format_task_packet(
     label: str,
     *,

@@ -14,14 +14,14 @@
   ·
   <a href="https://getmycelium.vercel.app">Website</a>
   ·
-  <a href="https://github.com/Tyler-Hughes312/mycelium/releases/tag/v0.1.2-desktop">Download Desktop</a>
+  <a href="https://github.com/Tyler-Hughes312/mycelium/releases/tag/v0.1.3-desktop">Download Desktop</a>
   ·
   <a href="docs/marketing/">Marketing / launch</a>
 </p>
 
 [![CI](https://github.com/Tyler-Hughes312/mycelium/actions/workflows/ci.yml/badge.svg)](https://github.com/Tyler-Hughes312/mycelium/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.1.2-0ea5e9.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.1.3-0ea5e9.svg)](CHANGELOG.md)
 [![Site](https://img.shields.io/badge/site-getmycelium.vercel.app-black.svg)](https://getmycelium.vercel.app)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-3776AB.svg)](services/core/pyproject.toml)
 [![Local-first](https://img.shields.io/badge/privacy-local--first-22c55e.svg)](docs/DEPLOY.md)
@@ -31,7 +31,7 @@ Stop burning tokens re-reading and re-searching your codebase every session. Myc
 
 This is **not** a chat journal or “agent memory vault.” Those tools optimize for remembering conversations. Mycelium optimizes for **efficient retrieval from your project structure** — a stronger, more demoable pitch (tokens saved vs paste-the-file / re-grep).
 
-**Agent loop (new):** `mycelium_session_start` → task tools (`change_context` / `debug_context`) → cite the one-line **`receipt=`** instead of re-dumping the repo. Desktop **Impact** shows **grounded %** (recalls with a receipt vs without).
+**Agent loop:** `session_start` → **`reuse_check`** (plan/build) → task tools (`change_context` / `debug_context`) → cite the one-line **`receipt=`** instead of re-dumping the repo. Open a git repo in Cursor with Core running and **`workspaceOpen` auto-indexes**. Desktop **Impact** shows **grounded %** (recalls with a receipt vs without).
 
 **30-second try:** Desktop (or `./scripts/dev.sh`) → Library → add `fixtures/dogfood-rate-limits` → Index → ask your agent via MCP: *how did we handle rate limits?*
 
@@ -49,6 +49,8 @@ This is **not** a chat journal or “agent memory vault.” Those tools optimize
 | | |
 |---|---|
 | **Token efficiency (headline)** | Tight focus/search packets vs dumping files or grepping every session |
+| **Open → index** | Cursor `workspaceOpen` hook registers the git repo and starts indexing when Core is up |
+| **Prior-art reuse** | `mycelium_reuse_check` — search all indexed repos; ask adapt vs build new before plan/build |
 | **Session bootstrap** | `mycelium_session_start` / `preflight` — auto-register repo, optional index, compact brain + open-file focus |
 | **Task-shaped tools** | `mycelium_change_context` / `mycelium_debug_context` — ranked hits for implement vs fix, not raw search lists |
 | **Context receipts** | One-line `receipt=` attestation (paths/ids only) — cite it; `verify_receipt` checks staleness without re-dumping |
@@ -62,7 +64,7 @@ This is **not** a chat journal or “agent memory vault.” Those tools optimize
 
 Install a packaged app (Core is bundled — no Python/Node required):
 
-- **Latest release:** https://github.com/Tyler-Hughes312/mycelium/releases/tag/v0.1.2-desktop  
+- **Latest release:** https://github.com/Tyler-Hughes312/mycelium/releases/tag/v0.1.3-desktop  
 - **All releases:** https://github.com/Tyler-Hughes312/mycelium/releases  
 - **Install notes (Gatekeeper / SmartScreen):** [docs/DESKTOP-INSTALL.md](docs/DESKTOP-INSTALL.md)
 - **Marketing site:** https://getmycelium.vercel.app  
@@ -89,7 +91,7 @@ Or point Cursor at the absolute binary: `…/mycelium/venv/bin/mycelium-mcp`.
 
 ### 2. Add MCP config (Cursor)
 
-Copy [`templates/cursor/mcp.json.example`](templates/cursor/mcp.json.example) → `.cursor/mcp.json`:
+`./scripts/install.sh` merges Mycelium into **user-level** `~/.cursor/mcp.json` and installs a Cursor **`workspaceOpen`** hook so opening any git repo auto-registers + indexes (Core must be running). You can also copy [`templates/cursor/mcp.json.example`](templates/cursor/mcp.json.example) → project `.cursor/mcp.json`:
 
 ```json
 {
@@ -107,14 +109,16 @@ Optional agent rule: copy [`templates/cursor/mycelium-mcp.mdc`](templates/cursor
 
 ### 3. Bootstrap, then ask (relevant-only)
 
-1. Reload Cursor MCP (Core on `:8787` via Desktop or `mycelium serve`)
-2. Agent calls `mycelium_session_start` with your repo’s absolute path (auto-registers + indexes) — **compact** prefs + open-file focus, not a vault dump
-3. Prefer `mycelium_change_context` / `mycelium_debug_context` / `mycelium_search` over grepping the whole tree
-4. Cite the `receipt=` line; use `mycelium_verify_receipt` to check staleness instead of re-pasting files
+1. Start Core on `:8787` (Desktop or `mycelium serve`) — open a git repo in Cursor to auto-index via `workspaceOpen`
+2. Agent calls `mycelium_session_start` with your repo’s absolute path (compact prefs + open-file focus; also indexes if needed)
+3. On plan/build: `mycelium_reuse_check` first — ask reuse vs new if strong prior art
+4. Prefer `mycelium_change_context` / `mycelium_debug_context` / `mycelium_search` over grepping the whole tree
+5. Cite the `receipt=` line; use `mycelium_verify_receipt` to check staleness instead of re-pasting files
 
 | Tool | Role |
 |---|---|
 | `mycelium_session_start` / `preflight` | Bootstrap + optional index |
+| `mycelium_reuse_check` | Cross-repo prior art; ask reuse vs new |
 | `mycelium_change_context` | Implement / change a goal |
 | `mycelium_debug_context` | Fix an error / stack |
 | `mycelium_search` / `focus` | Semantic or file-local recall |

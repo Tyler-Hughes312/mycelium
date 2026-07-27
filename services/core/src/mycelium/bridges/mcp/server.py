@@ -13,6 +13,7 @@ from mycelium.bridges.mcp.formatters import (
     format_commits,
     format_note,
     format_packet,
+    format_reuse_packet,
     format_task_packet,
     resolve_workspace_id,
 )
@@ -30,21 +31,25 @@ _INSTRUCTIONS = (
     "HARD HOOKS (required for meaningful coding work):\n"
     "1) Call mycelium_session_start (or mycelium_preflight) FIRST with the absolute "
     "workspace_path. It returns a COMPACT bootstrap + a one-line receipt — not a chat journal.\n"
-    "2) Before broad exploration (grep, globbing many files, reading large trees), "
+    "2) On plan / build / implement intents: call mycelium_reuse_check(goal) FIRST "
+    "(searches ALL indexed repos). If the packet says ASK USER, ask reuse/adapt vs build new "
+    "and WAIT — do not plan or code until they answer.\n"
+    "3) Before broad exploration (grep, globbing many files, reading large trees), "
     "call mycelium_search, mycelium_focus, mycelium_change_context, or "
     "mycelium_debug_context first. Cite the receipt=… line; do NOT re-dump vault/code.\n"
-    "3) Prefer mycelium_change_context(goal=…) when implementing; "
+    "4) Prefer mycelium_change_context(goal=…) when implementing (after reuse_check); "
     "mycelium_debug_context(error=…) when fixing. These return ranked hits only.\n"
-    "4) mycelium_verify_receipt(id) returns paths/titles only (no bodies). Use it to check "
+    "5) mycelium_verify_receipt(id) returns paths/titles only (no bodies). Use it to check "
     "staleness instead of re-running a large pack.\n"
-    "5) Do NOT dump chat transcripts into the vault. Do NOT paste entire files when a "
+    "6) Do NOT dump chat transcripts into the vault. Do NOT paste entire files when a "
     "receipt already covers the hit list.\n\n"
     "READ (prefer cheap structure first):\n"
     "1) mycelium_vault_tree → 2) mycelium_vault_pack(bucket, small max_tokens) → "
     "3) mycelium_get_note only if needed.\n\n"
     "INDEX / ZERO-CONFIG:\n"
-    "Passing workspace_path auto-registers a git repo if missing. Full index starts only "
-    "from mycelium_session_start / mycelium_preflight when ensure_index=true (default).\n\n"
+    "Passing workspace_path auto-registers a git repo if missing. Full index starts from "
+    "the Cursor workspaceOpen hook (open folder) and/or mycelium_session_start / "
+    "mycelium_preflight when ensure_index=true (default).\n\n"
     "Never invent paths that tools did not return."
 )
 
@@ -381,31 +386,48 @@ def mycelium_preflight(
 
 
 @mcp.tool()
-def mycelium_verify_receipt(receipt_id: str) -> str:
+def mycelium_reuse_check(
+    goal: str,
+    workspace_path: str = "",
+    workspace_id: str = "",
+    limit: int = 8,
+) -> str:
     """
-    Verify a context receipt without re-dumping code or vault bodies.
+    Prior-art check across ALL indexed repos before plan/build.
 
-    Returns status (valid/stale), head comparison, and item paths/titles only.
-    Prefer this over re-running session_start or a large vault_pack.
+    Returns ranked similar Symbol/File hits split into other repos vs this repo.
+    If strong prior art exists, the packet tells you to ASK the user:
+    reuse/adapt vs build new — wait for their answer before implementing.
+    Prefer this before mycelium_change_context for greenfield builds.
     """
-    from mycelium.core.domain.context_receipt import format_verify
-
     core = _core()
     try:
-        row = core.get_receipt(receipt_id.strip())
-        if not row:
-            return f"error: receipt not found: {receipt_id}"
-        return format_verify(
-            {
-                "id": row.get("id"),
-                "tool": row.get("tool"),
-                "workspace_id": row.get("workspace_id"),
-                "head": row.get("head"),
-                "item_count": row.get("item_count"),
-                "served_tokens": row.get("served_tokens"),
-                "items": row.get("items") or [],
-            },
-            current_head=str(row.get("head_now") or ""),
+        current_id = ""
+        path = (workspace_path or "").strip()
+        wid_arg = (workspace_id or "").strip()
+        if path:
+            try:
+                ws, _ = ensure_registered(core, path)
+                current_id = str(ws.get("id") or "")
+                try:
+                    core.sync_workspace(current_id)
+                except Exception:  # noqa: BLE001
+                    pass
+            except Exception:  # noqa: BLE001
+                current_id = ""
+        elif wid_arg and wid_arg not in {"*", "all"}:
+            current_id = wid_arg
+
+        packet = core.query(
+            query=goal,
+            workspace_id="*",
+            limit=max(1, min(limit, 12)),
+        )
+        return format_reuse_packet(
+            goal,
+            query_packet=packet,
+            current_workspace_id=current_id or None,
+            current_workspace_path=path or None,
         )
     except Exception as exc:  # noqa: BLE001
         return f"error: {exc}"
@@ -422,8 +444,9 @@ def mycelium_change_context(
 ) -> str:
     """
     Task-shaped packet for implementing a change: ranked search hits, related
-    decisions, and recent commits. Prefer this over raw search when the intent
-    is 'implement / change X'.
+    decisions, and recent commits. Prefer mycelium_reuse_check(goal) first for
+    plan/build intents (cross-repo prior art + ask reuse vs new). Prefer this
+    over raw search when the intent is 'implement / change X' after that check.
     """
     core = _core()
     try:
@@ -461,6 +484,39 @@ def mycelium_change_context(
             vault_slice=vault_slice,
             commits_text=commits_text,
             hint=hint,
+        )
+    except Exception as exc:  # noqa: BLE001
+        return f"error: {exc}"
+    finally:
+        core.close()
+
+
+@mcp.tool()
+def mycelium_verify_receipt(receipt_id: str) -> str:
+    """
+    Verify a context receipt without re-dumping code or vault bodies.
+
+    Returns status (valid/stale), head comparison, and item paths/titles only.
+    Prefer this over re-running session_start or a large vault_pack.
+    """
+    from mycelium.core.domain.context_receipt import format_verify
+
+    core = _core()
+    try:
+        row = core.get_receipt(receipt_id.strip())
+        if not row:
+            return f"error: receipt not found: {receipt_id}"
+        return format_verify(
+            {
+                "id": row.get("id"),
+                "tool": row.get("tool"),
+                "workspace_id": row.get("workspace_id"),
+                "head": row.get("head"),
+                "item_count": row.get("item_count"),
+                "served_tokens": row.get("served_tokens"),
+                "items": row.get("items") or [],
+            },
+            current_head=str(row.get("head_now") or ""),
         )
     except Exception as exc:  # noqa: BLE001
         return f"error: {exc}"

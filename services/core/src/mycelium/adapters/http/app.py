@@ -188,6 +188,15 @@ def create_app(config: MyceliumConfig | None = None) -> FastAPI:
             default_model=cfg.impact.default_model,
             pricing_overrides=cfg.impact.pricing_overrides,
         )
+        # Older Desktop sidecars logged tokens without $ — fill on upgrade.
+        from mycelium.core.domain.impact_pricing import rate_for_model
+
+        impact.store.backfill_pricing(
+            default_model=cfg.impact.default_model,
+            usd_per_1m_input=rate_for_model(
+                cfg.impact.default_model, cfg.impact.pricing_overrides
+            ),
+        )
         application.state.impact_service = impact
         application.state.receipt_store = ReceiptStore(
             cfg.paths.data_dir / "context_receipts.json"

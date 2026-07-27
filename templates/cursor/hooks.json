@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "hooks": {
+    "workspaceOpen": [
+      {
+        "command": "~/.mycelium/bin/cursor-workspace-open",
+        "timeout": 10
+      }
+    ]
+  }
+}

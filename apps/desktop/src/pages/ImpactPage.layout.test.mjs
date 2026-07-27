@@ -14,3 +14,11 @@ test("Impact page centers constrained content like other desktop pages", () => {
     "Impact content shell should use max-w-4xl mx-auto so it is not left-pinned",
   );
 });
+
+test("Impact page defaults to all-time range so $ saved is visible", () => {
+  assert.match(
+    source,
+    /useState<Range>\("all"\)/,
+    "Default Impact range should be all (today often looks like $0)",
+  );
+});

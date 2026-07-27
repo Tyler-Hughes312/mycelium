@@ -141,7 +141,7 @@ function BreakdownRow({
 }
 
 export function ImpactPage() {
-  const [range, setRange] = useState<Range>("today");
+  const [range, setRange] = useState<Range>("all");
   const [summary, setSummary] = useState<ImpactSummary | null>(null);
   const [events, setEvents] = useState<ImpactEvent[]>([]);
   const [trackingEnabled, setTrackingEnabled] = useState(true);

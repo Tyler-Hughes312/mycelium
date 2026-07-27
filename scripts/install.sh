@@ -62,14 +62,23 @@ else
   echo "    Kept existing .cursor/mcp.json"
 fi
 
+echo "==> Installing user-level Cursor hooks + MCP (auto-index on workspace open)…"
+# shellcheck disable=SC2094
+(
+  cd "$ROOT/scripts"
+  "$ROOT/venv/bin/python" install_cursor_user_config.py \
+    --repo-root "$ROOT" \
+    --mycelium-mcp "$ROOT/venv/bin/mycelium-mcp"
+)
+
 echo
 echo "Install complete."
 echo
 echo "Next (≈ first Context in <15 min):"
-echo "  1. ./scripts/run-core.sh   # or ./scripts/dev.sh for HMR"
-echo "  2. Open http://localhost:5173  (with ./scripts/dev.sh)"
-echo "  3. Library → add: $ROOT/fixtures/dogfood-rate-limits"
-echo "  4. Index → Start index → Search: \"how did we handle rate limits\""
+echo "  1. ./scripts/run-core.sh   # or Desktop app (Core on :8787)"
+echo "  2. Open any git repo in Cursor — workspaceOpen auto-registers + indexes"
+echo "  3. Or dogfood: Library → add: $ROOT/fixtures/dogfood-rate-limits"
+echo "  4. Search: \"how did we handle rate limits\""
 echo
 echo "Production Desktop preview: ./scripts/run-desktop.sh"
 echo "VS Code .vsix: cd apps/vscode && npm run package"

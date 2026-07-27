@@ -34,6 +34,39 @@ class ImpactStore:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         atomic_write_json(self.path, {"events": events})
 
+    def backfill_pricing(
+        self,
+        *,
+        default_model: str,
+        usd_per_1m_input: float,
+    ) -> int:
+        """Fill usd_saved / model fields on older events that predate pricing."""
+        from mycelium.core.domain.impact_pricing import compute_usd_saved
+
+        rate = float(usd_per_1m_input or 0)
+        model = (default_model or "").strip() or "claude-sonnet-4"
+        if rate <= 0:
+            return 0
+        events = self._load()
+        changed = 0
+        for ev in events:
+            if not isinstance(ev, dict):
+                continue
+            if ev.get("usd_saved") is not None and ev.get("usd_per_1m_input") is not None:
+                continue
+            saved = int(ev.get("tokens_saved") or 0)
+            ev["usd_per_1m_input"] = rate
+            ev["usd_saved"] = compute_usd_saved(
+                tokens_saved=saved, usd_per_1m_input=rate
+            )
+            if not ev.get("model_id"):
+                ev["model_id"] = model
+                ev["model_source"] = "default"
+            changed += 1
+        if changed:
+            self._save(events)
+        return changed
+
     def append(self, event: dict[str, Any]) -> None:
         events = self._load()
         events.append(event)
