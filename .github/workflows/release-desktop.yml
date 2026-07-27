@@ -32,17 +32,19 @@ jobs:
         shell: bash
         run: |
           python -m venv venv
-          if [[ -x ./venv/bin/pip ]]; then
-            PIP=./venv/bin/pip
-          elif [[ -x ./venv/Scripts/pip.exe ]]; then
-            PIP=./venv/Scripts/pip.exe
+          # Prefer Windows Scripts/ first — Git Bash can make bin/ look executable incorrectly.
+          if [[ -f ./venv/Scripts/python.exe ]]; then
+            PY=./venv/Scripts/python.exe
+          elif [[ -x ./venv/bin/python ]]; then
+            PY=./venv/bin/python
           else
-            echo "venv pip not found" >&2
+            echo "venv python not found" >&2
+            ls -la venv venv/Scripts venv/bin 2>/dev/null || true
             exit 1
           fi
-          "$PIP" install -U pip
-          "$PIP" install -e "services/core[dev]"
-          "$PIP" install "pyinstaller>=6.0"
+          "$PY" -m pip install -U pip
+          "$PY" -m pip install -e "services/core[dev]"
+          "$PY" -m pip install "pyinstaller>=6.0"
 
       - uses: actions/setup-node@v4
         with:
