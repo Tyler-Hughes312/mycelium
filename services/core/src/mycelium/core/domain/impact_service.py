@@ -132,6 +132,26 @@ class ImpactService:
             receipt_id=receipt_id,
         )
 
+    def record_chat_turn(
+        self,
+        *,
+        served: int,
+        baseline: int,
+        workspace_id: str | None = None,
+        probe: dict | None = None,
+        receipt_id: str | None = None,
+    ) -> None:
+        saved = compute_tokens_saved(served=served, baseline=baseline)
+        self._record(
+            tool="chat",
+            workspace_id=workspace_id,
+            served=max(0, int(served)),
+            baseline=max(0, int(baseline)),
+            saved=saved,
+            probe=probe,
+            receipt_id=receipt_id,
+        )
+
     def record_search_or_focus(
         self,
         *,

@@ -130,3 +130,32 @@ class ThreadStore:
         self._save_index(index)
 
         return turn
+
+    def set_fields(self, thread_id: str, **fields: Any) -> dict[str, Any]:
+        """Update top-level thread metadata fields (e.g. handoff_path)."""
+        doc = self._load_thread(thread_id)
+        if doc is None:
+            raise ValueError(f"Unknown thread: {thread_id}")
+        allowed = {
+            "title",
+            "handoff_path",
+            "last_receipt_id",
+            "last_receipt_items",
+        }
+        for key, value in fields.items():
+            if key in allowed:
+                doc[key] = value
+        now = _now_iso()
+        doc["updated_at"] = now
+        self._save_thread(doc)
+        index = self._load_index()
+        for row in index:
+            if row.get("id") == thread_id:
+                row["updated_at"] = now
+                if "title" in fields:
+                    row["title"] = fields["title"]
+                if "handoff_path" in fields:
+                    row["handoff_path"] = fields["handoff_path"]
+                break
+        self._save_index(index)
+        return self._with_turn_count(doc)

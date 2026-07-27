@@ -52,6 +52,15 @@ client_id = ""
 # Local token-savings estimates for recall (search / focus / vault pack). No cloud.
 tracking_enabled = true
 default_model = "claude-sonnet-4"
+
+[llm]
+# Optional OpenAI-compatible chat provider (requires allow_remote_llm + API key).
+provider = "openai_compatible"
+model = "gpt-4o-mini"
+base_url = "https://api.openai.com/v1"
+# Env var name holding the API key (preferred). Fallback file: ~/.mycelium/llm_api_key
+api_key_env = "MYCELIUM_LLM_API_KEY"
+api_key_file = "llm_api_key"
 """
 
 
@@ -99,6 +108,15 @@ class ImpactSettings:
 
 
 @dataclass(frozen=True)
+class LlmSettings:
+    provider: str = "openai_compatible"
+    model: str = "gpt-4o-mini"
+    base_url: str = "https://api.openai.com/v1"
+    api_key_env: str = "MYCELIUM_LLM_API_KEY"
+    api_key_file: str = "llm_api_key"
+
+
+@dataclass(frozen=True)
 class MyceliumConfig:
     paths: MyceliumPaths
     network: NetworkPolicy
@@ -107,6 +125,7 @@ class MyceliumConfig:
     embedding: EmbeddingSettings
     github: GitHubSettings = GitHubSettings()
     impact: ImpactSettings = ImpactSettings()
+    llm: LlmSettings = LlmSettings()
     config_version: int = CURRENT_CONFIG_VERSION
 
 
@@ -140,6 +159,7 @@ def _rewrite_migrated(config_file: Path, raw: dict) -> None:
     emb = raw.get("embedding", {})
     gh = raw.get("github", {})
     impact = raw.get("impact", {})
+    llm = raw.get("llm", {})
     token = str(srv.get("api_token", "") or "")
     client_id = str(gh.get("client_id", "") or "").replace('"', '\\"')
     tracking = bool(impact.get("tracking_enabled", True))
@@ -147,6 +167,17 @@ def _rewrite_migrated(config_file: Path, raw: dict) -> None:
     default_model = default_model.replace("\\", "\\\\").replace('"', '\\"')
     overrides = _parse_pricing_overrides(impact.get("pricing_overrides"))
     overrides_toml = _format_pricing_overrides_toml(overrides)
+    llm_provider = str(llm.get("provider", "openai_compatible") or "openai_compatible").replace(
+        '"', '\\"'
+    )
+    llm_model = str(llm.get("model", "gpt-4o-mini") or "gpt-4o-mini").replace('"', '\\"')
+    llm_base = str(llm.get("base_url", "https://api.openai.com/v1") or "https://api.openai.com/v1").replace(
+        '"', '\\"'
+    )
+    llm_env = str(llm.get("api_key_env", "MYCELIUM_LLM_API_KEY") or "MYCELIUM_LLM_API_KEY").replace(
+        '"', '\\"'
+    )
+    llm_file = str(llm.get("api_key_file", "llm_api_key") or "llm_api_key").replace('"', '\\"')
     text = f"""\
 # Mycelium local configuration
 # Code and Vault contents stay on this machine by default (FR-19 / AD-2).
@@ -178,7 +209,14 @@ client_id = "{client_id}"
 [impact]
 tracking_enabled = {"true" if tracking else "false"}
 default_model = "{default_model}"
-{overrides_toml}"""
+{overrides_toml}
+[llm]
+provider = "{llm_provider}"
+model = "{llm_model}"
+base_url = "{llm_base}"
+api_key_env = "{llm_env}"
+api_key_file = "{llm_file}"
+"""
     config_file.write_text(text, encoding="utf-8")
 
 
@@ -204,6 +242,7 @@ def load_config(home: Path | None = None) -> MyceliumConfig:
     emb_cfg = raw.get("embedding", {})
     gh_cfg = raw.get("github", {})
     impact_cfg = raw.get("impact", {})
+    llm_cfg = raw.get("llm", {})
 
     def resolve(p: str, fallback: str) -> Path:
         candidate = Path(p or fallback).expanduser()
@@ -230,6 +269,21 @@ def load_config(home: Path | None = None) -> MyceliumConfig:
     if not default_model:
         default_model = "claude-sonnet-4"
     pricing_overrides = _parse_pricing_overrides(impact_cfg.get("pricing_overrides"))
+    llm_settings = LlmSettings(
+        provider=str(llm_cfg.get("provider", "openai_compatible") or "openai_compatible").strip()
+        or "openai_compatible",
+        model=str(llm_cfg.get("model", "gpt-4o-mini") or "gpt-4o-mini").strip() or "gpt-4o-mini",
+        base_url=str(
+            llm_cfg.get("base_url", "https://api.openai.com/v1") or "https://api.openai.com/v1"
+        ).strip()
+        or "https://api.openai.com/v1",
+        api_key_env=str(
+            llm_cfg.get("api_key_env", "MYCELIUM_LLM_API_KEY") or "MYCELIUM_LLM_API_KEY"
+        ).strip()
+        or "MYCELIUM_LLM_API_KEY",
+        api_key_file=str(llm_cfg.get("api_key_file", "llm_api_key") or "llm_api_key").strip()
+        or "llm_api_key",
+    )
 
     return MyceliumConfig(
         paths=MyceliumPaths(
@@ -255,6 +309,7 @@ def load_config(home: Path | None = None) -> MyceliumConfig:
             default_model=default_model,
             pricing_overrides=pricing_overrides,
         ),
+        llm=llm_settings,
         config_version=int(raw.get("config_version", CURRENT_CONFIG_VERSION)),
     )
 
@@ -296,6 +351,11 @@ def write_config(cfg: MyceliumConfig) -> None:
     client_id = cfg.github.client_id.replace("\\", "\\\\").replace('"', '\\"')
     default_model = cfg.impact.default_model.replace("\\", "\\\\").replace('"', '\\"')
     overrides_toml = _format_pricing_overrides_toml(cfg.impact.pricing_overrides)
+    llm_provider = cfg.llm.provider.replace("\\", "\\\\").replace('"', '\\"')
+    llm_model = cfg.llm.model.replace("\\", "\\\\").replace('"', '\\"')
+    llm_base = cfg.llm.base_url.replace("\\", "\\\\").replace('"', '\\"')
+    llm_env = cfg.llm.api_key_env.replace("\\", "\\\\").replace('"', '\\"')
+    llm_file = cfg.llm.api_key_file.replace("\\", "\\\\").replace('"', '\\"')
     text = f"""\
 # Mycelium local configuration
 # Code and Vault contents stay on this machine by default (FR-19 / AD-2).
@@ -327,7 +387,14 @@ client_id = "{client_id}"
 [impact]
 tracking_enabled = {"true" if cfg.impact.tracking_enabled else "false"}
 default_model = "{default_model}"
-{overrides_toml}"""
+{overrides_toml}
+[llm]
+provider = "{llm_provider}"
+model = "{llm_model}"
+base_url = "{llm_base}"
+api_key_env = "{llm_env}"
+api_key_file = "{llm_file}"
+"""
     cfg.paths.config_file.write_text(text, encoding="utf-8")
     cfg.paths.data_dir.mkdir(parents=True, exist_ok=True)
     cfg.paths.vault_dir.mkdir(parents=True, exist_ok=True)
@@ -417,6 +484,7 @@ def update_config(
         embedding=EmbeddingSettings(model=new_model),
         github=new_gh,
         impact=new_impact,
+        llm=cfg.llm,
         config_version=cfg.config_version,
     )
     write_config(updated)
@@ -436,6 +504,11 @@ def settings_dict(cfg: MyceliumConfig) -> dict:
         "impact_tracking_enabled": cfg.impact.tracking_enabled,
         "impact_default_model": cfg.impact.default_model,
         "impact_pricing_overrides": dict(cfg.impact.pricing_overrides),
+        "llm_provider": cfg.llm.provider,
+        "llm_model": cfg.llm.model,
+        "llm_base_url": cfg.llm.base_url,
+        "llm_api_key_env": cfg.llm.api_key_env,
+        "llm_api_key_configured": bool(_resolve_llm_key_present(cfg)),
         "api_token_enabled": bool(cfg.server.api_token),
         "github_client_id": cfg.github.client_id,
         "github_oauth_configured": bool(cfg.github.client_id),
@@ -449,3 +522,16 @@ def settings_dict(cfg: MyceliumConfig) -> dict:
             ),
         },
     }
+
+
+def _resolve_llm_key_present(cfg: MyceliumConfig) -> bool:
+    import os
+
+    env_name = (cfg.llm.api_key_env or "MYCELIUM_LLM_API_KEY").strip() or "MYCELIUM_LLM_API_KEY"
+    if os.environ.get(env_name, "").strip():
+        return True
+    key_file = (cfg.llm.api_key_file or "llm_api_key").strip() or "llm_api_key"
+    path = Path(key_file).expanduser()
+    if not path.is_absolute():
+        path = cfg.paths.home / path
+    return path.is_file() and bool(path.read_text(encoding="utf-8").strip())
