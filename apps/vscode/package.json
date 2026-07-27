@@ -2,7 +2,7 @@
   "name": "mycelium",
   "displayName": "Mycelium",
   "description": "Local-first context layer side panel for AI-heavy developers",
-  "version": "0.1.0",
+  "version": "0.1.5",
   "publisher": "mycelium-local",
   "license": "MIT",
   "repository": {
@@ -16,8 +16,16 @@
   "engines": {
     "vscode": "^1.85.0"
   },
-  "categories": ["Other"],
-  "keywords": ["mycelium", "rag", "context", "local-first", "vault"],
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "mycelium",
+    "rag",
+    "context",
+    "local-first",
+    "vault"
+  ],
   "icon": "media/icon.png",
   "activationEvents": [
     "onStartupFinished",

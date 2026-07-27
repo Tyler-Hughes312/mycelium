@@ -7,8 +7,8 @@ Side panel Context Packet + New Note. Talks to local Core at `http://127.0.0.1:8
 ```bash
 cd apps/vscode
 npm install
-npm run package          # → mycelium-0.1.0.vsix
-code --install-extension mycelium-0.1.0.vsix
+npm run package          # → mycelium-0.1.5.vsix
+code --install-extension mycelium-0.1.5.vsix
 # or Cursor: Extensions → … → Install from VSIX
 ```
 

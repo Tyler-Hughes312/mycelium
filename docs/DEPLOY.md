@@ -1,6 +1,6 @@
 # Deploy / operate Mycelium (local product)
 
-Runbook for the **0.1.0** local-first install. Not cloud hosting.
+Runbook for the **0.1.5** local-first install. Not cloud hosting.
 
 ## Artifacts
 

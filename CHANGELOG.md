@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Version bump 0.1.4 → 0.1.5 (Core, Desktop, UI)
+- Align VS Code extension, marketing site package, and marketing service versions to 0.1.5
 
 ## [0.1.4] — 2026-07-27
 

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mycelium-marketing"
-version = "0.1.0"
+version = "0.1.5"
 description = "Mycelium marketing publisher — HN + Reddit launch autopilot"
 requires-python = ">=3.12"
 dependencies = [
