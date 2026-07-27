@@ -57,6 +57,25 @@ function modelSourceLabel(source: ImpactModelSource | undefined) {
   return "Unknown";
 }
 
+const UNPRICED_MODEL_HINT =
+  "No list price for this model — add a rate in Settings.";
+
+function showUnpricedModelHint(params: {
+  usdSaved: number;
+  tokensSaved?: number;
+  modelSource?: ImpactModelSource;
+  modelId?: string;
+  usdPer1mInput?: number;
+}): boolean {
+  const { usdSaved, tokensSaved = 0, modelSource, modelId, usdPer1mInput } =
+    params;
+  if (usdSaved !== 0) return false;
+  if (modelSource === "inferred") return true;
+  if (!modelId) return false;
+  if (usdPer1mInput !== undefined) return usdPer1mInput === 0;
+  return tokensSaved > 0;
+}
+
 function ModelSourceBadge({
   source,
 }: {
@@ -84,12 +103,14 @@ function BreakdownRow({
   tokensSaved,
   usdSaved,
   badge,
+  unpricedHint,
 }: {
   title: string;
   eventCount: number;
   tokensSaved: number;
   usdSaved: number;
   badge?: ReactNode;
+  unpricedHint?: boolean;
 }) {
   return (
     <li className="flex flex-wrap items-baseline justify-between gap-sm px-md py-sm">
@@ -109,6 +130,11 @@ function BreakdownRow({
         <p className="font-technical-mono-sm text-technical-mono-sm text-on-surface">
           {formatUsd(usdSaved)}
         </p>
+        {unpricedHint ? (
+          <p className="font-technical-mono-sm text-technical-mono-sm text-muted mt-px max-w-[14rem]">
+            {UNPRICED_MODEL_HINT}
+          </p>
+        ) : null}
       </div>
     </li>
   );
@@ -305,6 +331,12 @@ export function ImpactPage() {
                       badge={
                         <ModelSourceBadge source={row.model_source_dominant} />
                       }
+                      unpricedHint={showUnpricedModelHint({
+                        usdSaved: row.usd_saved ?? 0,
+                        tokensSaved: row.tokens_saved,
+                        modelSource: row.model_source_dominant,
+                        modelId: row.model_id,
+                      })}
                     />
                   ))}
                 </ul>
@@ -369,6 +401,17 @@ export function ImpactPage() {
                     <p className="font-technical-mono-sm text-technical-mono-sm text-on-surface">
                       {formatUsd(ev.usd_saved ?? 0)}
                     </p>
+                    {showUnpricedModelHint({
+                      usdSaved: ev.usd_saved ?? 0,
+                      tokensSaved: ev.tokens_saved,
+                      modelSource: ev.model_source,
+                      modelId: ev.model_id,
+                      usdPer1mInput: ev.usd_per_1m_input,
+                    }) ? (
+                      <p className="font-technical-mono-sm text-technical-mono-sm text-muted mt-px max-w-[14rem]">
+                        {UNPRICED_MODEL_HINT}
+                      </p>
+                    ) : null}
                   </div>
                 </li>
               ))}

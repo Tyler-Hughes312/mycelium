@@ -15,6 +15,30 @@ import {
   type ImpactPricing,
 } from "../api/client";
 
+/** Shipped Core defaults — keep in sync with `DEFAULT_INPUT_RATES_USD_PER_1M`. */
+const SHIPPED_INPUT_RATES: Record<string, number> = {
+  "claude-sonnet-4": 3.0,
+  "claude-opus-4": 15.0,
+  "claude-haiku-3.5": 0.8,
+  "gpt-4o": 2.5,
+  "gpt-4.1": 2.0,
+  "gemini-2.5-flash": 0.15,
+  "gemini-2.5-pro": 1.25,
+};
+
+function diffImpactPricingOverrides(
+  draft: Record<string, number>,
+): Record<string, number> {
+  const overrides: Record<string, number> = {};
+  for (const [id, value] of Object.entries(draft)) {
+    const shipped = SHIPPED_INPUT_RATES[id];
+    if (shipped === undefined || Math.abs(value - shipped) > 1e-9) {
+      overrides[id] = value;
+    }
+  }
+  return overrides;
+}
+
 const MODEL_OPTIONS = [
   {
     id: "sentence-transformers/all-MiniLM-L6-v2",
@@ -178,7 +202,7 @@ export function SettingsPage() {
     try {
       const res = await patchSettings({
         impact_default_model: impactDefaultModel,
-        impact_pricing_overrides: impactRates,
+        impact_pricing_overrides: diffImpactPricingOverrides(impactRates),
       });
       setSettings(res.settings);
       applyImpactPricingDraft(await getImpactPricing());
