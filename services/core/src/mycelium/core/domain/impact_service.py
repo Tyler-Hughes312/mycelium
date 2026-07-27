@@ -112,6 +112,7 @@ class ImpactService:
         pack: dict[str, Any],
         max_tokens: int,
         workspace_id: str | None = None,
+        probe: dict | None = None,
     ) -> None:
         served, baseline, saved = estimate_pack_impact(
             tokens_est=int(pack.get("tokens_est") or 0),
@@ -123,6 +124,7 @@ class ImpactService:
             served=served,
             baseline=baseline,
             saved=saved,
+            probe=probe,
         )
 
     def record_search_or_focus(
@@ -131,6 +133,7 @@ class ImpactService:
         tool: str,
         payload: dict[str, Any],
         workspace_root: Path | None = None,
+        probe: dict | None = None,
     ) -> None:
         results = payload.get("results") or []
         snippets: list[str] = []
@@ -162,4 +165,5 @@ class ImpactService:
             served=served,
             baseline=baseline,
             saved=saved,
+            probe=probe,
         )

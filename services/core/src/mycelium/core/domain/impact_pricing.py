@@ -4,6 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
+IMPACT_PRICING_DISCLAIMER = (
+    "Estimated vs dumping matched files into the model context. "
+    "Uses API list prices you can edit in Settings — not Cursor subscription billing. "
+    "When Cursor does not send a model id, Mycelium uses your Impact default model "
+    "and labels it Assumed."
+)
+
 DEFAULT_INPUT_RATES_USD_PER_1M: dict[str, float] = {
     "claude-sonnet-4": 3.0,
     "claude-opus-4": 15.0,
@@ -64,6 +71,33 @@ def _extract_model_from_probe(probe: dict[str, Any] | None) -> tuple[str, str]:
             if key in meta and meta[key]:
                 return str(meta[key]).strip(), f"_meta.{key}"
     return "", ""
+
+
+def pricing_table(
+    *,
+    default_model: str,
+    overrides: dict[str, float] | None,
+) -> dict[str, Any]:
+    effective = effective_rates(overrides)
+    override_keys = set(overrides or {})
+    rates: list[dict[str, Any]] = []
+    for model_id, usd_per_1m_input in effective.items():
+        shipped = DEFAULT_INPUT_RATES_USD_PER_1M.get(model_id)
+        overridden = model_id in override_keys and (
+            shipped is None or float(usd_per_1m_input) != float(shipped)
+        )
+        rates.append(
+            {
+                "id": model_id,
+                "usd_per_1m_input": float(usd_per_1m_input),
+                "overridden": overridden,
+            }
+        )
+    return {
+        "default_model": (default_model or "").strip(),
+        "rates": rates,
+        "disclaimer": IMPACT_PRICING_DISCLAIMER,
+    }
 
 
 def resolve_model(
