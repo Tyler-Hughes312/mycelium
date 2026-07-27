@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
@@ -17,8 +18,10 @@ from mycelium.adapters.embeddings.bootstrap import bootstrap_embedder, status_di
 from mycelium.adapters.git import GitError
 from mycelium.adapters.git.watcher import VaultWatcher, WorkspaceWatcherManager
 from mycelium.adapters.github import GitHubError, GitHubService
+from mycelium.adapters.llm.echo import EchoLlm
 from mycelium.adapters.store import JsonFileWorkspaceRepo, WorkspaceError
 from mycelium.adapters.store.impact_store import ImpactStore
+from mycelium.adapters.store.thread_store import ThreadStore
 from mycelium.adapters.vault import VaultError
 from mycelium.adapters.git.files import git_head
 from mycelium.core.config import (
@@ -27,6 +30,7 @@ from mycelium.core.config import (
     settings_dict,
     update_config,
 )
+from mycelium.core.domain.chat_service import ChatError, ChatService
 from mycelium.core.domain.context_receipt import ReceiptStore, mint_receipt
 from mycelium.core.domain.impact_pricing import pricing_table
 from mycelium.core.domain.impact_service import ImpactService
@@ -34,6 +38,7 @@ from mycelium.core.domain.index_service import IndexService
 from mycelium.core.domain.rag_service import RagService
 from mycelium.core.domain.vault_service import VaultService, estimate_tokens
 from mycelium.core.logging import setup_logging
+from mycelium.core.ports.llm import LlmProvider
 from mycelium.core.privacy import PrivacyError
 
 log = logging.getLogger("mycelium.http")
@@ -110,6 +115,25 @@ class GitHubImportRequest(BaseModel):
     clone_url: str = Field(..., min_length=1)
     dest: str | None = None
     full_name: str | None = None
+
+
+class CreateThreadRequest(BaseModel):
+    workspace_id: str = Field(..., min_length=1)
+    title: str = ""
+
+
+class SendMessageRequest(BaseModel):
+    text: str = Field(..., min_length=1)
+    include_code_rag: bool = True
+
+
+class SearchThreadRequest(BaseModel):
+    query: str = Field(..., min_length=1)
+    limit: int = Field(default=8, ge=1, le=50)
+
+
+class HandoffRequest(BaseModel):
+    summary: str | None = None
 
 
 def _http_error(exc: WorkspaceError | GitError | VaultError | GitHubError) -> HTTPException:
@@ -198,9 +222,24 @@ def create_app(config: MyceliumConfig | None = None) -> FastAPI:
             ),
         )
         application.state.impact_service = impact
-        application.state.receipt_store = ReceiptStore(
-            cfg.paths.data_dir / "context_receipts.json"
+        receipt_store = ReceiptStore(cfg.paths.data_dir / "context_receipts.json")
+        application.state.receipt_store = receipt_store
+        thread_store = ThreadStore(cfg.paths.data_dir / "threads")
+        application.state.thread_store = thread_store
+        application.state.chat_service = ChatService(
+            threads=thread_store,
+            rag=rag,
+            embedding=index.embedding_service,
+            vault=vault,
+            impact=impact,
+            receipts=receipt_store,
+            config=cfg,
         )
+        # Tests/dev: MYCELIUM_LLM=echo or app.state.chat_llm override (no API key).
+        if os.environ.get("MYCELIUM_LLM", "").strip().lower() == "echo":
+            application.state.chat_llm = EchoLlm()
+        else:
+            application.state.chat_llm = None
         try:
             yield
         finally:
@@ -255,7 +294,15 @@ def create_app(config: MyceliumConfig | None = None) -> FastAPI:
     async def privacy_error_handler(_request: Request, exc: PrivacyError) -> JSONResponse:
         return JSONResponse(
             status_code=403,
-            content={"detail": {"code": exc.code, "message": exc.message}},
+            content={"error": {"code": exc.code, "message": exc.message}},
+        )
+
+    @application.exception_handler(ChatError)
+    async def chat_error_handler(_request: Request, exc: ChatError) -> JSONResponse:
+        status = 404 if exc.code == "not_found" else 400
+        return JSONResponse(
+            status_code=status,
+            content={"error": {"code": exc.code, "message": exc.message}},
         )
 
     @application.exception_handler(Exception)
@@ -293,6 +340,17 @@ def create_app(config: MyceliumConfig | None = None) -> FastAPI:
 
     def receipt_store() -> ReceiptStore:
         return application.state.receipt_store
+
+    def chat_service() -> ChatService:
+        return application.state.chat_service
+
+    def _resolve_chat_llm() -> LlmProvider | None:
+        override = getattr(application.state, "chat_llm", None)
+        if override is not None:
+            return override
+        if os.environ.get("MYCELIUM_LLM", "").strip().lower() == "echo":
+            return EchoLlm()
+        return None
 
     def watchers() -> WorkspaceWatcherManager:
         return application.state.watchers
@@ -793,6 +851,54 @@ def create_app(config: MyceliumConfig | None = None) -> FastAPI:
         impact_service().store.clear()
         return {"cleared": True}
 
+    @application.post("/threads", status_code=201)
+    def create_thread(body: CreateThreadRequest) -> dict[str, Any]:
+        thread = chat_service().create_thread(
+            workspace_id=body.workspace_id,
+            title=body.title or "",
+        )
+        return {"thread": thread}
+
+    @application.get("/threads")
+    def list_threads(workspace_id: str | None = None) -> dict[str, Any]:
+        rows = chat_service().list_threads(workspace_id=workspace_id)
+        return {"threads": rows, "count": len(rows)}
+
+    @application.get("/threads/{thread_id}")
+    def get_thread(
+        thread_id: str,
+        offset: int = 0,
+        limit: int = 100,
+    ) -> dict[str, Any]:
+        return chat_service().get_thread(thread_id, offset=offset, limit=limit)
+
+    @application.post("/threads/{thread_id}/messages")
+    def send_thread_message(
+        thread_id: str,
+        body: SendMessageRequest,
+    ) -> dict[str, Any]:
+        return chat_service().send_message(
+            thread_id,
+            body.text,
+            include_code_rag=body.include_code_rag,
+            llm=_resolve_chat_llm(),
+        )
+
+    @application.post("/threads/{thread_id}/search")
+    def search_thread(thread_id: str, body: SearchThreadRequest) -> dict[str, Any]:
+        return chat_service().search_thread(
+            thread_id,
+            body.query,
+            limit=body.limit,
+        )
+
+    @application.post("/threads/{thread_id}/handoff")
+    def handoff_thread(
+        thread_id: str,
+        body: HandoffRequest = HandoffRequest(),
+    ) -> dict[str, Any]:
+        return chat_service().handoff(thread_id, summary=body.summary)
+
     @application.get("/settings")
     def get_settings() -> dict[str, Any]:
         cfg: MyceliumConfig = application.state.mycelium_config
@@ -841,6 +947,15 @@ def create_app(config: MyceliumConfig | None = None) -> FastAPI:
         )
         application.state.vault_service = vault
         application.state.rag_service.attach_vault(vault)
+        application.state.chat_service = ChatService(
+            threads=application.state.thread_store,
+            rag=application.state.rag_service,
+            embedding=application.state.index_service.embedding_service,
+            vault=vault,
+            impact=impact_service(),
+            receipts=receipt_store(),
+            config=updated,
+        )
         application.state.index_service.history_depth = updated.index.history_depth
         restart_hint = None
         if (
