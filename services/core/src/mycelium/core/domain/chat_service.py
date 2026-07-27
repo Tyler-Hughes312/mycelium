@@ -13,6 +13,7 @@ from mycelium.core.domain.chat_assembler import assemble_chat_prompt
 from mycelium.core.domain.context_receipt import ReceiptStore, mint_receipt
 from mycelium.core.domain.embedding_service import EmbeddingService
 from mycelium.core.domain.impact_service import ImpactService
+from mycelium.core.domain.node_types import display_kind_for_row, family_of
 from mycelium.core.domain.rag_service import RagService
 from mycelium.core.domain.thread_chunking import chunk_turn
 from mycelium.core.domain.thread_index import index_thread_chunks
@@ -241,6 +242,10 @@ class ChatService:
             raise ChatError("not_found", f"Unknown thread: {thread_id}")
         workspace_id = str(doc.get("workspace_id") or "")
 
+        # Resolve/validate LLM before appending so missing key / privacy gate
+        # cannot orphan a user turn in the thread store.
+        provider = self._resolve_llm(llm)
+
         user_turn = self._threads.append_turn(thread_id, role="user", text=text)
         index_ok = self._index_turn(
             thread_id=thread_id, turn=user_turn, workspace_id=workspace_id
@@ -276,8 +281,9 @@ class ChatService:
                     limit=6,
                 )
                 for row in code_packet.get("results") or []:
-                    kind = str(row.get("kind") or "")
-                    if kind == "ThreadChunk":
+                    # Exclude Thread family (ThreadChunk) from code RAG path —
+                    # catch lowercase / meta-only kinds via display_kind_for_row.
+                    if family_of(display_kind_for_row(row)) == "Thread":
                         continue
                     code_hits.append(row)
             except Exception:
@@ -294,7 +300,6 @@ class ChatService:
         if reason:
             assembly = {**assembly, "reason": reason}
 
-        provider = self._resolve_llm(llm)
         reply = provider.complete(list(assembly.get("messages") or []))
 
         assistant_turn = self._threads.append_turn(

@@ -133,6 +133,121 @@ def test_send_message_without_llm_key_errors(tmp_path: Path) -> None:
     assert ei.value.code == "llm_not_configured"
 
 
+def test_llm_not_configured_leaves_turn_count_unchanged(tmp_path: Path) -> None:
+    """Missing LLM must fail before append_turn — no orphaned user message."""
+    chat, threads, ws_id, _home = _build_chat(tmp_path)
+    t = threads.create(workspace_id=ws_id, title="no-orphan")
+    before = chat.get_thread(t["id"])["turn_count"]
+    with pytest.raises(ChatError) as ei:
+        chat.send_message(t["id"], "hello without key", llm=None)
+    assert ei.value.code == "llm_not_configured"
+    after = chat.get_thread(t["id"])["turn_count"]
+    assert after == before
+    turns = threads.list_turns(t["id"])
+    assert turns == []
+
+
+def test_thread_chunk_excluded_from_code_hits(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Thread family rows must not enter code_hits even if kind is lowercase/meta-only."""
+    chat, threads, ws_id, _home = _build_chat(tmp_path)
+    t = threads.create(workspace_id=ws_id, title="code-filter")
+    marker = "THREAD_CHUNK_MUST_NOT_REACH_CODE_RAG_XYZ"
+
+    def fake_code_query(
+        self: RagService,  # noqa: ARG001
+        *,
+        workspace_id: str,  # noqa: ARG001
+        query: str,  # noqa: ARG001
+        limit: int = 8,  # noqa: ARG001
+        **_kwargs: object,
+    ) -> dict:
+        return {
+            "results": [
+                {
+                    "id": f"node:thread_chunk:{t['id']}:1:0",
+                    # lowercase + meta — old `kind == "ThreadChunk"` filter missed this
+                    "kind": "thread_chunk",
+                    "path": "",
+                    "title": "leaked chunk",
+                    "snippet": marker,
+                    "meta": {"kind": "thread_chunk", "thread_id": t["id"], "turn_seq": 1},
+                },
+                {
+                    "id": "node:symbol:demo:foo",
+                    "kind": "Function",
+                    "path": "demo.py",
+                    "title": "foo",
+                    "snippet": "def foo(): return 1",
+                    "meta": {"symbol_kind": "function"},
+                },
+            ]
+        }
+
+    monkeypatch.setattr(RagService, "query", fake_code_query)
+
+    spy_messages: list[list[dict[str, str]]] = []
+
+    class SpyEcho(EchoLlm):
+        def complete(self, messages, *, model=None) -> str:  # type: ignore[no-untyped-def]
+            spy_messages.append(list(messages))
+            return super().complete(messages, model=model)
+
+    out = chat.send_message(t["id"], "find foo", llm=SpyEcho(), include_code_rag=True)
+    assert spy_messages
+    blob = " ".join(m["content"] for m in spy_messages[0])
+    assert marker not in blob
+    included = set(out["assembly"].get("included_hit_ids") or [])
+    assert f"node:thread_chunk:{t['id']}:1:0" not in included
+    # Legitimate code hit may still assemble
+    assert "def foo" in blob or "node:symbol:demo:foo" in included or "foo" in blob
+
+
+def test_index_stale_falls_back_to_tail_only(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Embed/index failure → reason=index_stale, no thread hits, prompt still bounded."""
+    chat, threads, ws_id, _home = _build_chat(tmp_path)
+    t = threads.create(workspace_id=ws_id, title="stale-index")
+    for i in range(30):
+        threads.append_turn(
+            t["id"],
+            role="user" if i % 2 == 0 else "assistant",
+            text=f"prior turn {i} " + ("filler words " * 40),
+        )
+
+    def boom(*_args: object, **_kwargs: object) -> int:
+        raise RuntimeError("forced embed failure")
+
+    monkeypatch.setattr(
+        "mycelium.core.domain.chat_service.index_thread_chunks",
+        boom,
+    )
+
+    spy_messages: list[list[dict[str, str]]] = []
+
+    class SpyEcho(EchoLlm):
+        def complete(self, messages, *, model=None) -> str:  # type: ignore[no-untyped-def]
+            spy_messages.append(list(messages))
+            return super().complete(messages, model=model)
+
+    out = chat.send_message(
+        t["id"],
+        "what about bananas?",
+        llm=SpyEcho(),
+        include_code_rag=False,
+    )
+    assembly = out["assembly"]
+    assert assembly["reason"] == "index_stale"
+    assert assembly.get("included_hit_ids") in ([], None) or not any(
+        str(hid).startswith("node:thread_chunk:")
+        for hid in (assembly.get("included_hit_ids") or [])
+    )
+    assert assembly["tokens_assembled"] < assembly["tokens_full_thread_est"]
+    assert spy_messages
+    blob = " ".join(m["content"] for m in spy_messages[0])
+    # Tail-only path: must not dump all 30 prior turns
+    assert blob.count("prior turn") <= 3
+    assert blob.count("filler words") < 120
+
+
 def test_handoff_note_has_no_full_transcript(tmp_path: Path) -> None:
     chat, threads, ws_id, home = _build_chat(tmp_path)
     t = threads.create(workspace_id=ws_id, title="handoff-demo")
