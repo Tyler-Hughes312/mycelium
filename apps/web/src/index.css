@@ -168,23 +168,18 @@ h3 {
   transform: none;
 }
 
-/* Mobile: skip pin theater; stack capabilities vertically. */
-@media (max-width: 768px) {
-  [data-chapter="capabilities"] {
-    height: auto;
-    overflow: visible;
-  }
+/* Keep capability panels full-viewport (incl. mobile browser chrome). */
+[data-chapter="capabilities"] {
+  height: 100svh;
+  height: 100dvh;
+}
 
-  [data-caps-track] {
-    flex-direction: column;
-    width: 100% !important;
-    height: auto;
-    transform: none !important;
-  }
+[data-caps-track] {
+  height: 100%;
+}
 
-  [data-caps-track] > * {
-    width: 100%;
-    height: auto;
-    min-height: min(70vh, 36rem);
-  }
+[data-caps-track] > * {
+  width: 100vw;
+  min-height: 100%;
+  box-sizing: border-box;
 }

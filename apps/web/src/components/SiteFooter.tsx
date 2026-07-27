@@ -24,7 +24,7 @@ export function SiteFooter() {
           </p>
         </div>
         <nav aria-label="Footer">
-          <ul className="flex flex-wrap gap-6 text-sm font-medium">
+          <ul className="flex flex-wrap gap-x-5 gap-y-3 text-sm font-medium sm:justify-end">
             <li>
               <a href="#features" className={footerLink}>
                 Features

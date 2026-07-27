@@ -11,7 +11,7 @@ export function Setup() {
         <p className="font-display text-sm font-medium uppercase tracking-[0.2em] text-[var(--color-teal)]">
           Setup
         </p>
-        <h2 className="mt-3 font-display text-4xl font-semibold tracking-tight text-[var(--color-fg)] sm:text-5xl">
+        <h2 className="mt-3 font-display text-[clamp(2rem,5vw,3rem)] font-semibold tracking-tight text-[var(--color-fg)]">
           Three steps to a local context layer
         </h2>
         <ol className="mt-12 flex flex-col gap-8">
@@ -21,8 +21,8 @@ export function Setup() {
               data-setup-step
               className="rounded-xl border border-white/10 bg-[var(--color-surface)] px-6 py-6 sm:px-8"
             >
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-baseline sm:gap-6">
-                <span className="font-display text-sm font-semibold text-[var(--color-teal)]">
+              <div className="flex flex-row items-baseline gap-4 sm:gap-6">
+                <span className="shrink-0 font-display text-sm font-semibold text-[var(--color-teal)]">
                   {String(step.n).padStart(2, "0")}
                 </span>
                 <div>
@@ -37,7 +37,7 @@ export function Setup() {
             </li>
           ))}
         </ol>
-        <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
+        <div className="mt-10 flex flex-row flex-wrap items-center gap-4">
           <a
             href={LINKS.desktopDownload}
             download={LINKS.desktopFilename}

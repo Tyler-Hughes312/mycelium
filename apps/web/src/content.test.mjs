@@ -22,15 +22,42 @@ test("capabilities cover five surfaces in order", async () => {
 });
 
 test("outcomes cover token savings reuse and scale", async () => {
-  const { OUTCOMES } = await import("./content.ts");
+  const { OUTCOMES, OUTCOMES_INTRO, OUTCOMES_COMPARE } = await import(
+    "./content.ts"
+  );
   assert.deepEqual(
     OUTCOMES.map((o) => o.id),
     ["tokens", "quality", "reuse", "scale", "local"],
   );
-  const blob = OUTCOMES.map((o) => `${o.title} ${o.body}`).join(" ").toLowerCase();
+  const blob = [
+    OUTCOMES_INTRO.headline,
+    OUTCOMES_INTRO.sub,
+    ...OUTCOMES.map((o) => `${o.title} ${o.body}`),
+    ...OUTCOMES_COMPARE.without,
+    ...OUTCOMES_COMPARE.with,
+  ]
+    .join(" ")
+    .toLowerCase();
   assert.match(blob, /token/);
-  assert.match(blob, /reuse/);
+  assert.match(blob, /reuse|index/);
   assert.match(blob, /large|monorepo/);
+  assert.match(blob, /memory|journal|diary|chat/);
+  assert.match(blob, /codebase|code|repo|symbol/);
+});
+
+test("hero pitches token efficiency over chat memory", async () => {
+  const { HERO } = await import("./content.ts");
+  const blob = `${HERO.headline} ${HERO.sub} ${HERO.proof}`.toLowerCase();
+  assert.match(blob, /token/);
+  assert.match(blob, /index/);
+  assert.match(blob, /not a chat journal|journal/);
+});
+
+test("vault capability is secondary to code indexing", async () => {
+  const { CAPABILITIES } = await import("./content.ts");
+  const vault = CAPABILITIES.find((c) => c.id === "vault");
+  assert.ok(vault);
+  assert.match(vault.body.toLowerCase(), /optional|secondary/);
 });
 
 test("setup never tells users to run shell installers", async () => {
@@ -49,7 +76,7 @@ test("impact metrics cover tokens packet reuse grounded with illustrative discla
     "./content.ts"
   );
   assert.equal(IMPACT_INTRO.eyebrow, "Impact");
-  assert.match(IMPACT_INTRO.headline.toLowerCase(), /token|fewer|sharper/);
+  assert.match(IMPACT_INTRO.headline.toLowerCase(), /token|fewer|measure/);
   assert.deepEqual(
     IMPACT_METRICS.map((m) => m.id),
     ["tokens", "packet", "reuse", "grounded"],
@@ -64,4 +91,5 @@ test("impact metrics cover tokens packet reuse grounded with illustrative discla
     .toLowerCase();
   assert.match(blob, /token/);
   assert.match(IMPACT_DISCLAIMER.toLowerCase(), /illustrative/);
+  assert.match(IMPACT_DISCLAIMER.toLowerCase(), /benchmark|desktop impact/);
 });

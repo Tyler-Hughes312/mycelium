@@ -9,15 +9,15 @@ updated: 2026-07-25
 
 ## One-liner
 
-Mycelium is a local-first second brain for AI-heavy developers: it auto-grows a knowledge graph from your code and git history, pairs it with an Obsidian-style thinking vault, and surfaces the right context in your editor and agents via local RAG.
+Mycelium is a local-first **codebase context layer** for AI-heavy developers: it indexes your repos (structure, symbols, git) and returns precise retrieval packets to editors and agents — so you burn fewer tokens re-reading and re-searching every session. An optional Thinking Vault holds decisions/ADRs; it is not a chat-memory product.
 
 ## Problem
 
-AI coding agents are only as good as the context they get. Most sessions start near-zero: past decisions, abandoned approaches, and “why this weird function exists” live in git history, closed PRs, and one person’s head. Obsidian solves personal knowledge management but demands manual linking — discipline that dies on a fast-moving codebase. Session-memory tools for agents (PMB, Mimir, agentmemory, CodeMem) help agents remember *chat facts*; they do not primarily auto-build a *code+thinking* graph that also serves the human.
+AI coding agents are only as good as the context they get. Most sessions waste tokens re-pasting files or grepping the tree for code you already shipped. Session-memory tools (Memory Vault / Context Vault style) help agents remember *chat facts*; they do not primarily index the *codebase* for efficient, measurable retrieval. Hosted code RAG often wants your repo in the cloud.
 
 ## Who it’s for
 
-AI-heavy solo and power developers using Cursor, Claude Code, Copilot, and similar tools — people who already feel context starvation and will install a local tool without a sales call.
+AI-heavy solo and power developers using Cursor, Claude Code, Copilot, and similar tools — people who feel token burn and context starvation and will install a local tool without a sales call.
 
 **Not for (v0):** enterprise procurement buyers, teams needing shared sync, people who want a hosted SaaS-only memory product.
 
@@ -25,17 +25,17 @@ AI-heavy solo and power developers using Cursor, Claude Code, Copilot, and simil
 
 1. **Local ingestion** — index repos from git history + tree-sitter structure into a graph.
 2. **Local RAG** — laptop-sized embeddings + hybrid retrieval (vector + keyword), fully offline by default.
-3. **Second brain vault** — markdown notes with wikilinks/backlinks, linked to code entities.
+3. **Optional vault** — markdown notes with wikilinks/backlinks, linked to code entities (secondary).
 4. **Surfacing** — VS Code/Cursor side panel shows ranked related commits, code, and notes for the current file/function.
-5. **Agent bridge** — MCP (and local API) so agents can query the same graph without reinventing memory.
+5. **Agent bridge** — MCP (and local API) so agents query the same index without re-scanning the tree.
 
 ## Differentiation
 
 | vs | Mycelium wedge |
 |---|---|
+| Agent memory / “context vault” | Codebase index + token-efficient packets; memory of chat is not the product |
 | Obsidian | Auto-graph from code/git; notes are one layer, not the whole product |
-| Pure agent memory (PMB/Mimir/etc.) | Code-structure + git-aware graph + human thinking vault + editor UX, not only MCP memory |
-| Hosted Code RAG (CodeMem etc.) | Local-first, open-core path; code never leaves the machine by default |
+| Hosted Code RAG | Local-first; code never leaves the machine by default |
 
 ## Business shape (post-MVP)
 

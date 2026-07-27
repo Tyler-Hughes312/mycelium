@@ -13,7 +13,7 @@ export function Capabilities() {
     <section
       id="features"
       data-chapter="capabilities"
-      className="relative h-screen overflow-hidden bg-[var(--color-bg)]"
+      className="relative overflow-hidden bg-[var(--color-bg)]"
     >
       <div
         data-caps-track
@@ -31,7 +31,7 @@ export function Capabilities() {
               </p>
             </div>
             <div className="max-w-2xl">
-              <h2 className="font-display text-5xl font-semibold tracking-tight sm:text-7xl">
+              <h2 className="font-display text-[clamp(2.75rem,8vw,4.5rem)] font-semibold tracking-tight">
                 {cap.title}
               </h2>
               <p className="mt-6 max-w-lg text-lg leading-relaxed opacity-90 sm:text-xl">

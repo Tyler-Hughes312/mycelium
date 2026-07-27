@@ -5,7 +5,7 @@ export function Hero() {
   return (
     <section
       data-chapter="hero"
-      className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 pb-24 pt-32 text-center"
+      className="relative flex min-h-svh min-h-dvh flex-col items-center justify-center overflow-hidden px-6 pb-24 pt-32 text-center"
     >
       <HyphaStroke className="pointer-events-none absolute inset-0 h-full w-full" />
       <div className="relative z-10 flex max-w-3xl flex-col items-center gap-7 pt-8">
@@ -13,23 +13,23 @@ export function Hero() {
           <img
             src="/logo-E-slate-teal.svg"
             alt=""
-            className="h-20 w-20 rounded-2xl shadow-2xl sm:h-24 sm:w-24"
+            className="h-24 w-24 rounded-2xl shadow-2xl"
           />
-          <span className="font-display text-5xl font-semibold tracking-tight text-[var(--color-fg)] sm:text-6xl">
+          <span className="font-display text-[clamp(2.75rem,8vw,3.75rem)] font-semibold tracking-tight text-[var(--color-fg)]">
             {HERO.brand}
           </span>
         </div>
 
         <h1
           data-hero-animate
-          className="max-w-2xl font-display text-3xl font-semibold leading-[1.15] tracking-tight text-[var(--color-fg)] sm:text-5xl"
+          className="max-w-2xl font-display text-[clamp(1.85rem,5.5vw,3rem)] font-semibold leading-[1.15] tracking-tight text-[var(--color-fg)]"
         >
           {HERO.headline}
         </h1>
 
         <p
           data-hero-animate
-          className="max-w-xl text-base leading-relaxed text-[var(--color-muted)] sm:text-lg"
+          className="max-w-xl text-lg leading-relaxed text-[var(--color-muted)]"
         >
           {HERO.sub}
         </p>
@@ -41,7 +41,7 @@ export function Hero() {
           {HERO.proof}
         </p>
 
-        <div data-hero-animate className="mt-1 flex flex-col gap-3 sm:flex-row">
+        <div data-hero-animate className="mt-1 flex flex-row flex-wrap items-center justify-center gap-3">
           <a
             href={LINKS.desktopDownload}
             download={LINKS.desktopFilename}

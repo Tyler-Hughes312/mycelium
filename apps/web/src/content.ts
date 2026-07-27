@@ -14,17 +14,17 @@ export const LINKS = {
 
 export const HERO = {
   brand: "Mycelium",
-  headline: "Stop re-explaining your codebase in every chat",
-  sub: "Index your repos and notes once on your machine. When Cursor or Claude asks, Mycelium returns the symbols, commits, and decisions that matter — so you spend fewer tokens and get answers that match how you already ship.",
-  proof: "Fewer tokens · Better reuse · Private on localhost",
+  headline: "Stop burning tokens re-reading your codebase every session",
+  sub: "Mycelium indexes your repos locally — symbols, files, commits — and returns a precise context packet when Cursor or Claude asks. Not a chat journal: an efficient path into the code you already have.",
+  proof: "Fewer tokens · Faster than re-grep · Private on localhost",
   primaryCta: "Download Desktop",
-  secondaryCta: "See what it does",
+  secondaryCta: "See how it saves tokens",
 } as const;
 
 export const OUTCOMES_INTRO = {
   eyebrow: "Why it exists",
-  headline: "Stop pasting half the repo into every chat",
-  sub: "Mycelium indexes your code and decisions locally, then feeds agents only the slices that matter — so you burn fewer tokens, get sharper answers, and reuse work you already shipped.",
+  headline: "Indexed code retrieval — not another memory diary",
+  sub: "Agent “memory vaults” remember conversations. Mycelium indexes your project structure and returns the slices that answer the question — so you can show tokens saved, not vague persistence.",
 } as const;
 
 export type Outcome = {
@@ -37,17 +37,17 @@ export const OUTCOMES: Outcome[] = [
   {
     id: "tokens",
     title: "Spend tokens on the answer, not the haystack",
-    body: "Hybrid search + focus packets pull symbols, commits, and notes that match the question — instead of dumping giant files and hoping the model finds the needle.",
+    body: "Hybrid search + focus packets pull the matching symbols, commits, and notes — instead of re-pasting giant files or re-searching the tree every chat.",
   },
   {
     id: "quality",
-    title: "Outputs grounded in your real codebase",
-    body: "Agents cite patterns you already use: naming, error handling, rate-limit fixes, vault decisions. Less generic advice, more “how we do it here.”",
+    title: "A precise path into your real codebase",
+    body: "Retrieval is optimized for project structure and files: naming, error handling, rate-limit fixes you already shipped — not a transcript of last week’s chat.",
   },
   {
     id: "reuse",
     title: "Reuse code across projects",
-    body: "Import multiple repos into Library. When you start something new, Search still finds the auth helper, fixture, or ADR you wrote last quarter.",
+    body: "Import multiple repos into Library. When you start something new, Search still finds the auth helper, fixture, or ADR you wrote last quarter — without grepping by hand.",
   },
   {
     id: "scale",
@@ -57,9 +57,27 @@ export const OUTCOMES: Outcome[] = [
   {
     id: "local",
     title: "Private by default",
-    body: "Indexes and Thinking Vault live on your machine. Desktop and MCP start Core locally — nothing leaves localhost unless you opt in.",
+    body: "Indexes (and an optional Thinking Vault for decisions) live on your machine. Desktop and MCP start Core locally — nothing leaves localhost unless you opt in.",
   },
 ];
+
+/** Hardcoded compare strip in Outcomes.tsx — keep copy centralized. */
+export const OUTCOMES_COMPARE = {
+  withoutTitle: "Without Mycelium",
+  withTitle: "With Mycelium",
+  without: [
+    "Re-paste the same files every session",
+    "Burn tokens re-reading half the repo",
+    "Re-grep for last month’s fix in another tree",
+    "Generic answers that ignore your conventions",
+  ],
+  with: [
+    "One indexed path to the relevant slice",
+    "Tight packets — measure tokens saved",
+    "Reuse symbols and commits across Library",
+    "Outputs grounded in how you already ship",
+  ],
+} as const;
 
 export type Capability = {
   id: "library" | "index" | "search" | "vault" | "agents";
@@ -72,31 +90,31 @@ export const CAPABILITIES: Capability[] = [
   {
     id: "library",
     title: "Library",
-    body: "Import repos so Search can reuse old code across projects.",
+    body: "Import repos so retrieval can reuse real code across projects — not chat history.",
     wash: "magenta",
   },
   {
     id: "index",
     title: "Index",
-    body: "Local embeddings and indexes under ~/.mycelium.",
+    body: "Local embeddings of symbols, files, and commits under ~/.mycelium — built for code, not transcripts.",
     wash: "sage",
   },
   {
     id: "search",
     title: "Search",
-    body: "Hybrid recall over symbols, commits, files, and vault notes.",
+    body: "Hybrid recall: a precise packet of symbols, commits, and files that match the question.",
     wash: "violet",
   },
   {
     id: "vault",
     title: "Vault",
-    body: "Markdown second brain with buckets and wikilinks.",
+    body: "Optional markdown notes for decisions and ADRs — secondary to code indexing, not the product.",
     wash: "teal",
   },
   {
     id: "agents",
     title: "Agents",
-    body: "MCP tools for Cursor / Claude — Core starts with your IDE on demand.",
+    body: "MCP tools for Cursor / Claude — agents get indexed context on demand instead of re-scanning the tree.",
     wash: "amber",
   },
 ];
@@ -115,14 +133,14 @@ export const SETUP_STEPS = [
   {
     n: 3,
     title: "Use",
-    body: "Add a repo in Library, Index it, then Search — agents call Mycelium through MCP on demand.",
+    body: "Add a repo in Library, Index it, then Search — agents pull tight context packets through MCP instead of re-pasting files.",
   },
 ] as const;
 
 export const IMPACT_INTRO = {
   eyebrow: "Impact",
-  headline: "Fewer tokens. Sharper code. Same machine.",
-  sub: "Mycelium retrieves the slices that matter — so agents spend context on answers, not haystacks, and your conventions travel with every recall.",
+  headline: "Token efficiency you can measure",
+  sub: "The pitch is concrete: stop burning context on re-reads and greps. Mycelium serves an indexed packet — Desktop Impact tracks estimated tokens saved vs dumping matched files.",
 } as const;
 
 export type ImpactMetric = {
@@ -137,27 +155,27 @@ export const IMPACT_METRICS: ImpactMetric[] = [
     id: "tokens",
     stat: "~60–90%",
     title: "Fewer context tokens",
-    body: "Focus and search packets beat dumping whole files — spend the window on the answer, not the haystack.",
+    body: "Illustrative vs dumping whole files: focus/search packets spend the window on the answer, not the haystack.",
   },
   {
     id: "packet",
     stat: "1 packet",
     title: "Per question",
-    body: "Symbols, commits, and notes that match the ask — not half the repo pasted into every chat.",
+    body: "Symbols, commits, and files that match the ask — a precise path into the repo, not half of it pasted again.",
   },
   {
     id: "reuse",
     stat: "Library-wide",
-    title: "Reuse without re-paste",
-    body: "Find the auth helper, fixture, or ADR you already shipped in another imported repo.",
+    title: "Skip the re-grep",
+    body: "Find the auth helper, fixture, or ADR you already shipped in another imported repo — without hunting the tree.",
   },
   {
     id: "grounded",
     stat: "Your patterns",
-    title: "Grounded outputs",
-    body: "Answers match naming, error handling, and decisions you already use — less generic advice.",
+    title: "Codebase-grounded answers",
+    body: "Retrieval is about project structure and shipped code — stronger to demo than vague “the agent remembers.”",
   },
 ];
 
 export const IMPACT_DISCLAIMER =
-  "Illustrative of typical sessions — your Desktop app will track live savings once telemetry ships.";
+  "The ~60–90% figure is illustrative of typical focus/search vs paste-the-file sessions. Desktop Impact tracks live estimated savings locally (served packet vs baseline file dump) — not LLM billing accuracy, and not yet a published customer benchmark.";

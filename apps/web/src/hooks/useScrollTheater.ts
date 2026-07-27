@@ -5,10 +5,7 @@ import Lenis from "lenis";
 import { getPrefersReducedMotion } from "./prefersReducedMotion";
 
 gsap.registerPlugin(ScrollTrigger);
-
-function isMobileViewport(): boolean {
-  return window.matchMedia("(max-width: 768px)").matches;
-}
+ScrollTrigger.config({ ignoreMobileResize: true });
 
 export function useScrollTheater(rootRef: RefObject<HTMLElement | null>): void {
   useEffect(() => {
@@ -21,8 +18,12 @@ export function useScrollTheater(rootRef: RefObject<HTMLElement | null>): void {
     }
 
     root.dataset.motion = "full";
-    const skipPins = isMobileViewport();
-    const lenis = new Lenis({ autoRaf: true });
+    // Same smooth-scroll + pin theater on phone and desktop.
+    const lenis = new Lenis({
+      autoRaf: true,
+      syncTouch: true,
+      touchMultiplier: 1.1,
+    });
     lenis.on("scroll", ScrollTrigger.update);
 
     const ctx = gsap.context(() => {
@@ -52,53 +53,56 @@ export function useScrollTheater(rootRef: RefObject<HTMLElement | null>): void {
         });
       }
 
-      // Desktop only: ≤2 pins (capabilities horizontal scrub + setup steps).
-      if (!skipPins) {
-        const capabilities = root.querySelector<HTMLElement>(
-          "[data-chapter='capabilities']",
-        );
-        const capsTrack = root.querySelector<HTMLElement>("[data-caps-track]");
-        if (capabilities && capsTrack) {
-          const total = capsTrack.scrollWidth - capabilities.clientWidth;
-          gsap.to(capsTrack, {
-            x: () => -Math.max(total, 0),
-            ease: "none",
-            scrollTrigger: {
-              trigger: capabilities,
-              start: "top top",
-              end: () => `+=${Math.max(total, capabilities.clientHeight)}`,
-              pin: true,
-              scrub: 1,
-              invalidateOnRefresh: true,
-            },
-          });
-        }
+      // ≤2 pins: capabilities horizontal scrub + setup steps (all viewports).
+      const capabilities = root.querySelector<HTMLElement>(
+        "[data-chapter='capabilities']",
+      );
+      const capsTrack = root.querySelector<HTMLElement>("[data-caps-track]");
+      if (capabilities && capsTrack) {
+        const total = capsTrack.scrollWidth - capabilities.clientWidth;
+        gsap.to(capsTrack, {
+          x: () => -Math.max(total, 0),
+          ease: "none",
+          scrollTrigger: {
+            trigger: capabilities,
+            start: "top top",
+            end: () => `+=${Math.max(total, capabilities.clientHeight)}`,
+            pin: true,
+            scrub: 1,
+            anticipatePin: 1,
+            invalidateOnRefresh: true,
+          },
+        });
+      }
 
-        const setup = root.querySelector<HTMLElement>("[data-chapter='setup']");
-        if (setup) {
-          const steps = setup.querySelectorAll("[data-setup-step]");
-          if (steps.length > 0) {
-            gsap
-              .timeline({
-                scrollTrigger: {
-                  trigger: setup,
-                  start: "top top",
-                  end: "+=120%",
-                  pin: true,
-                  scrub: 1,
-                },
-              })
-              .from(steps, { opacity: 0.15, y: 40, stagger: 0.2 });
-          }
+      const setup = root.querySelector<HTMLElement>("[data-chapter='setup']");
+      if (setup) {
+        const steps = setup.querySelectorAll("[data-setup-step]");
+        if (steps.length > 0) {
+          gsap
+            .timeline({
+              scrollTrigger: {
+                trigger: setup,
+                start: "top top",
+                end: "+=120%",
+                pin: true,
+                scrub: 1,
+                anticipatePin: 1,
+              },
+            })
+            .from(steps, { opacity: 0.15, y: 40, stagger: 0.2 });
         }
       }
     }, root);
 
     const onLoad = () => ScrollTrigger.refresh();
+    const onResize = () => ScrollTrigger.refresh();
     window.addEventListener("load", onLoad);
+    window.addEventListener("orientationchange", onResize);
 
     return () => {
       window.removeEventListener("load", onLoad);
+      window.removeEventListener("orientationchange", onResize);
       ctx.revert();
       lenis.destroy();
       ScrollTrigger.getAll().forEach((trigger) => trigger.kill());

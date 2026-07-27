@@ -1,4 +1,4 @@
-import { OUTCOMES, OUTCOMES_INTRO } from "../content";
+import { OUTCOMES, OUTCOMES_COMPARE, OUTCOMES_INTRO } from "../content";
 
 export function Outcomes() {
   return (
@@ -11,34 +11,32 @@ export function Outcomes() {
         <p className="font-display text-sm font-medium uppercase tracking-[0.2em] text-[var(--color-teal)]">
           {OUTCOMES_INTRO.eyebrow}
         </p>
-        <h2 className="mt-3 max-w-3xl font-display text-4xl font-semibold tracking-tight text-[var(--color-fg)] sm:text-5xl">
+        <h2 className="mt-3 max-w-3xl font-display text-[clamp(2rem,5vw,3rem)] font-semibold tracking-tight text-[var(--color-fg)]">
           {OUTCOMES_INTRO.headline}
         </h2>
         <p className="mt-5 max-w-2xl text-lg leading-relaxed text-[var(--color-muted)]">
           {OUTCOMES_INTRO.sub}
         </p>
 
-        <div className="mt-14 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl border border-white/10 bg-[var(--color-surface)] px-6 py-6">
-            <p className="font-display text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-muted)]">
-              Without Mycelium
+        <div className="mt-14 grid grid-cols-2 gap-3 sm:gap-4">
+          <div className="rounded-xl border border-white/10 bg-[var(--color-surface)] px-4 py-5 sm:px-6 sm:py-6">
+            <p className="font-display text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted)] sm:text-xs">
+              {OUTCOMES_COMPARE.withoutTitle}
             </p>
-            <ul className="mt-4 space-y-3 text-base leading-relaxed text-[var(--color-muted)]">
-              <li>Re-paste the same files every session</li>
-              <li>Burn context window on noise</li>
-              <li>Lose last month’s fix in another repo</li>
-              <li>Answers that ignore your conventions</li>
+            <ul className="mt-4 space-y-2 text-sm leading-relaxed text-[var(--color-muted)] sm:space-y-3 sm:text-base">
+              {OUTCOMES_COMPARE.without.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
             </ul>
           </div>
-          <div className="rounded-xl border border-[var(--color-teal)]/35 bg-[var(--color-surface)] px-6 py-6">
-            <p className="font-display text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-teal)]">
-              With Mycelium
+          <div className="rounded-xl border border-[var(--color-teal)]/35 bg-[var(--color-surface)] px-4 py-5 sm:px-6 sm:py-6">
+            <p className="font-display text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-[var(--color-teal)] sm:text-xs">
+              {OUTCOMES_COMPARE.withTitle}
             </p>
-            <ul className="mt-4 space-y-3 text-base leading-relaxed text-[var(--color-fg)]">
-              <li>Retrieve the right slice on demand</li>
-              <li>Keep prompts tight and relevant</li>
-              <li>Reuse patterns across the Library</li>
-              <li>Outputs that match how you already ship</li>
+            <ul className="mt-4 space-y-2 text-sm leading-relaxed text-[var(--color-fg)] sm:space-y-3 sm:text-base">
+              {OUTCOMES_COMPARE.with.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
             </ul>
           </div>
         </div>
@@ -47,7 +45,7 @@ export function Outcomes() {
           {OUTCOMES.map((outcome, index) => (
             <li
               key={outcome.id}
-              className="grid gap-3 py-8 sm:grid-cols-[4rem_1fr] sm:gap-8"
+              className="grid grid-cols-[3rem_1fr] gap-4 py-8 sm:grid-cols-[4rem_1fr] sm:gap-8"
             >
               <span className="font-display text-sm font-semibold text-[var(--color-teal)]">
                 {String(index + 1).padStart(2, "0")}

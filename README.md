@@ -6,27 +6,32 @@
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-3776AB.svg)](services/core/pyproject.toml)
 [![Local-first](https://img.shields.io/badge/privacy-local--first-22c55e.svg)](docs/DEPLOY.md)
 
-**Local-first Context Layer** for AI-heavy developers.
+**Local-first context layer for AI-heavy developers.**
 
-One Graph powers Desktop, VS Code/Cursor, and MCP — your code and Thinking Vault stay on `127.0.0.1`. No cloud account.
+Stop burning tokens re-reading and re-searching your codebase every session. Mycelium **indexes your repos locally** (symbols, files, commits) and returns a **precise context packet** to Cursor / Claude via MCP — so agents spend context on the answer, not the haystack.
+
+This is **not** a chat journal or “agent memory vault.” Those tools optimize for remembering conversations. Mycelium optimizes for **efficient retrieval from your project structure** — a stronger, more demoable pitch (tokens saved vs paste-the-file / re-grep).
 
 ```text
   Cursor / Claude ──MCP──► mycelium-mcp ──► Core :8787
   Desktop (Vite)  ──HTTP──────────────────► Core :8787
   VS Code panel   ──HTTP──────────────────► Core :8787
                          │
-                         ├── ~/.mycelium/vault
-                         └── ~/.mycelium/data (indexes)
+                         ├── ~/.mycelium/data (indexes)  ← primary
+                         └── ~/.mycelium/vault           ← optional decisions/ADRs
 ```
 
 ## Why Mycelium
 
 | | |
 |---|---|
-| **Private by default** | Binds localhost only; upload / remote LLM are opt-in |
-| **One brain, three surfaces** | Desktop console · editor side panel · agent MCP tools |
-| **Durable memory** | Markdown vault with buckets, wikilinks, and local embeddings |
-| **Ship-ready locally** | `pip` / `mycelium serve` · `.vsix` · one-command install |
+| **Token efficiency (headline)** | Tight focus/search packets vs dumping files or grepping every session |
+| **Codebase-first index** | Project structure, symbols, commits — not conversation transcripts |
+| **Measurable impact** | Desktop **Impact** estimates tokens saved locally (served vs baseline dump) |
+| **Private by default** | Localhost only; upload / remote LLM are opt-in |
+| **Three surfaces** | Desktop console · editor side panel · agent MCP tools |
+
+**vs agent memory / “context vault” products:** they remember what you *said*. Mycelium retrieves what your *code* already contains. Thinking Vault notes are optional secondary context (decisions, ADRs) — not the core product.
 
 ## Download Desktop
 
@@ -84,6 +89,7 @@ rm -rf ~/.mycelium                   # optional: wipe vault + indexes
 
 ## Docs
 
+- [Positioning](docs/POSITIONING.md) — token efficiency vs agent-memory products
 - [Deploy / ops](docs/DEPLOY.md) — install, MCP, release gate
 - [Connect GitHub](docs/GITHUB.md) — import repos for cross-repo search
 - [Agent second brain](docs/AGENT-SECOND-BRAIN.md) — MCP read/write loop
@@ -112,5 +118,5 @@ Default embedding: `sentence-transformers/all-MiniLM-L6-v2` (cached under `~/.my
 ---
 
 <p align="center">
-  <sub>Built for developers who want AI context without uploading their repo.</sub>
+  <sub>Built for developers who want indexed code context — without uploading the repo or re-burning tokens every chat.</sub>
 </p>

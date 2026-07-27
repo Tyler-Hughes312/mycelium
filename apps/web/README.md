@@ -1,6 +1,6 @@
 # mycelium-web
 
-Marketing site for Mycelium — a local-first context layer for AI-heavy developers.
+Marketing site for Mycelium — local-first **indexed codebase retrieval** for AI-heavy developers (token efficiency, not chat-memory vaults). Live at [getmycelium.vercel.app](https://getmycelium.vercel.app). See [docs/POSITIONING.md](../../docs/POSITIONING.md).
 
 ## Develop
 
@@ -37,3 +37,5 @@ Deploy this app independently from the monorepo. In the Vercel project:
 | **Environment Variables** | none (fully static) |
 
 `vercel.json` mirrors build/output/framework for CLI deploys. No SPA rewrites are required for this single-page landing.
+
+Production alias: `https://getmycelium.vercel.app`

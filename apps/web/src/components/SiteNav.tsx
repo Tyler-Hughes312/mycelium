@@ -12,9 +12,9 @@ const linkClass =
 
 export function SiteNav() {
   return (
-    <header className="site-nav fixed inset-x-0 top-0 z-50 border-b border-white/5">
-      <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <a href="#" className={`flex items-center gap-3 ${linkClass}`}>
+    <header className="site-nav fixed inset-x-0 top-0 z-50 border-b border-white/5 pt-[env(safe-area-inset-top)]">
+      <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
+        <a href="#" className={`flex shrink-0 items-center gap-2 sm:gap-3 ${linkClass}`}>
           <img
             src="/logo-E-slate-teal.svg"
             alt="Mycelium"
@@ -24,7 +24,7 @@ export function SiteNav() {
             Mycelium
           </span>
         </a>
-        <ul className="flex flex-wrap items-center justify-end gap-x-5 gap-y-2 text-sm font-medium text-[var(--color-muted)]">
+        <ul className="hidden items-center gap-x-5 text-sm font-medium text-[var(--color-muted)] sm:flex">
           {NAV_LINKS.map((link) => (
             <li key={`${link.href}-${link.label}`}>
               <a href={link.href} className={linkClass}>
